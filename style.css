@@ -1,78 +1,138 @@
+/* ===== Reset + layout móvil estricto ===== */
+*,
+*::before,
+*::after { box-sizing: border-box; min-width: 0; }
+
+html { height: 100%; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; height: 100%;
+  background: #0d0f12; color: #eaeef5;
+  font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
+  overflow-x: hidden; /* evita scroll horizontal global */
+}
+
+/* Contenedor centrado y ancho fijo de app móvil */
+.app-wrap, header, main { max-width: 420px; margin: 0 auto; width: 100%; }
+main { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+/* ===== Tokens ===== */
 :root{
-  --bg:#0d0f12; --card:#151922; --text:#eaeef5; --muted:#98a2b3; --line:#202636; --accent:#7cc0ff; --radius:14px;
+  --card:#151922; --muted:#98a2b3; --line:#202636; --accent:#7cc0ff; --radius:14px;
 }
 
-*{box-sizing:border-box; min-width:0}
-html{height:100%; -webkit-text-size-adjust:100%;}
-body{
-  margin:0; height:100%; background:var(--bg); color:var(--text);
-  font-family:system-ui,Segoe UI,Roboto,Inter,Arial; overflow-x:hidden;
-}
-
-/* Layout móvil estricto, centrado */
-main{
-  padding:12px; display:flex; flex-direction:column; gap:12px;
-  width:100%; max-width:420px; margin:0 auto;
-}
-
-header{padding:16px}
-h1{margin:0 0 6px 0; font-size:20px}
-.tabs{display:flex; gap:8px; justify-content:flex-start}
+/* ===== Head ===== */
+header{ padding:16px; }
+h1{ margin:0 0 6px 0; font-size:20px; }
+.tabs{ display:flex; gap:8px; }
 .tab{
-  background:var(--card); color:var(--text); border:1px solid var(--line);
+  background:var(--card); color:#eaeef5; border:1px solid var(--line);
   padding:8px 12px; border-radius:999px
 }
-.tab.active{outline:2px solid var(--accent)}
+.tab.active{ outline:2px solid var(--accent) }
 
+/* ===== Paneles ===== */
 .panel{
   background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-  padding:14px; box-shadow:0 6px 24px #0004
+  padding:14px; box-shadow:0 6px 24px #0004;
+  overflow:hidden; /* asegura que nada desborde el panel */
 }
 
-.row{display:flex; justify-content:space-between; align-items:center; gap:10px; margin:8px 0}
+/* ===== Filas ===== */
+.row{
+  display:flex; justify-content:space-between; align-items:center; gap:10px; margin:8px 0;
+}
 .row input{
   width:180px; padding:10px; border-radius:10px; border:1px solid var(--line);
-  background:#0e121a; color:var(--text); font-size:16px; line-height:1.2;
-  outline:none;
+  background:#0e121a; color:#eaeef5; font-size:16px; line-height:1.2; outline:none;
 }
 
-.card{border:1px dashed var(--line); border-radius:12px; padding:10px; margin-top:6px}
-.item{display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0}
-.item label{flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis}
+/* ===== Lista de cuentas ===== */
+.card{ border:1px dashed var(--line); border-radius:12px; padding:10px; margin-top:6px }
+.item{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0 }
+.item label{ flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis }
 .item input{
   flex:0 0 150px; text-align:right; font-size:16px; line-height:1.2; /* anti-zoom iOS */
-  background:#0e121a; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px;
+  background:#0e121a; color:#eaeef5; border:1px solid var(--line); border-radius:10px; padding:10px;
 }
 
-.total strong{font-size:18px}
-.var strong{color:var(--muted)}
+.total strong{ font-size:18px }
+.var strong{ color:var(--muted) }
 
+/* ===== Actions (incluye file input) ===== */
 .actions{
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center
-}
-.actions button{
-  background:#0e121a; color:var(--text); border:1px solid var(--line);
-  padding:10px 12px; border-radius:10px; font-size:16px;
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center;
 }
 
-/* Tabla: scroll interno sin desbordar la página */
+/* Botones */
+.actions button{
+  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
+  padding:10px 12px; border-radius:10px; font-size:16px;
+  white-space:nowrap;
+}
+
+/* ====== FILE INPUT (#file-csv) ======
+   Evita que rompa el ancho, y dale estilo consistente de botón + texto truncado */
+#file-csv{
+  display:inline-block;
+  max-width:100%;
+  width:auto; /* que crezca hasta donde pueda en la fila */
+  color:var(--muted);
+  background:#0e121a;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px 10px;
+  font-size:16px; line-height:1.2;    /* anti-zoom iOS */
+  overflow:hidden; text-overflow:ellipsis;
+}
+
+/* Estilo del botón interno del file input (Chromium/Firefox) */
+#file-csv::file-selector-button{
+  background:#0e121a;
+  color:#eaeef5;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-right:8px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+/* Safari/WebKit */
+#file-csv::-webkit-file-upload-button{
+  background:#0e121a;
+  color:#eaeef5;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-right:8px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+/* Hace que el file input no fuerce el alto de la fila y corte nombres largos */
+.actions #file-csv{ flex:1 1 220px; min-width:180px; }
+
+/* ===== Tabla (scroll-x interno sin romper layout) ===== */
 .table{
-  width:100%; overflow-x:auto; border:1px solid var(--line); border-radius:12px;
+  width:100%;
+  overflow-x:auto;
+  border:1px solid var(--line); border-radius:12px;
   -webkit-overflow-scrolling:touch;
 }
 table{
   width:100%; border-collapse:collapse;
-  /* fuerza ancho mínimo para columnas y evita romper el layout externo */
-  min-width: 560px; table-layout:fixed;
+  min-width:560px; /* columnas legibles; el scroll se queda dentro de .table */
+  table-layout:fixed;
 }
 th,td{
-  border-bottom:1px solid var(--line); padding:10px; text-align:right; white-space:nowrap;
+  border-bottom:1px solid var(--line);
+  padding:10px; text-align:right; white-space:nowrap;
 }
 th:first-child,td:first-child{
-  text-align:left; position:sticky; left:0; background:var(--card); z-index:1;
+  text-align:left; background:var(--card);
 }
 
-/* En pantallas pequeñas, quita sticky para evitar saltos/h-scroll raro */
+/* En pantallas pequeñas, desactiva sticky para evitar “saltos” que empujan ancho */
 @media (max-width:480px){
   th:first-child, td:first-child{ position:static; }
   .row input{ width:140px }
@@ -84,9 +144,7 @@ button:focus-visible, input:focus-visible{
   outline:2px solid var(--accent); outline-offset:2px;
 }
 
-/* Anti-zoom iOS reforzado */
+/* Anti-zoom iOS reforzado en todos los campos */
 @supports (-webkit-touch-callout:none){
   input, select, textarea{ font-size:16px !important; }
 }
-
-/* El input file se eliminó: no estilos dependientes de #file-csv */
