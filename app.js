@@ -14,7 +14,7 @@
   const KEY_DATA = "mis_cuentas_fase1_data";
   const KEY_CUENTAS = "mis_cuentas_fase1_cuentas";
   const KEY_UID = "mis_cuentas_uid";
-  const KEY_HIDDEN_COLS = "mis_cuentas_hidden_cols";
+  const KEY_HIDDEN_COLS = "mis_cuentas_hidden_cols_by_name"; // guardamos NOMBRES, no índices
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
@@ -33,10 +33,11 @@
   const state = {
     uid: getOrCreateUid(),
     cuentas: JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
-    registros: JSON.parse(localStorage.getItem(KEY_DATA)) || []
+    registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
+    editingIndex: -1
   };
 
-  // columnas ocultas persistentes (por índice, incluyendo Fecha=0)
+  // columnas ocultas por NOMBRE (persistentes)
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN_COLS) || "[]"));
   function saveHiddenCols(){ localStorage.setItem(KEY_HIDDEN_COLS, JSON.stringify([...hiddenCols])); }
 
@@ -50,10 +51,16 @@
   const $status = document.getElementById("status");
   function setStatus(txt){ $status.textContent = txt||""; }
 
+  const $btnGuardar = document.getElementById("btn-guardar");
+  const $actionsPanels = document.querySelectorAll(".panel .actions");
+  let $btnCancelarEdicion = null;
+
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
-  document.getElementById("btn-limpiar").addEventListener("click", () => renderInputs({}));
-  document.getElementById("btn-exportar").addEventListener("click", onExportar);
-  document.getElementById("btn-importar").addEventListener("click", onImportar);
+  document.getElementById("btn-limpiar").addEventListener("click", () => { state.editingIndex=-1; setGuardarLabel(); renderInputs({}); });
+  const $btnExportar = document.getElementById("btn-exportar");
+  if($btnExportar) $btnExportar.addEventListener("click", onExportar);
+  const $btnImportar = document.getElementById("btn-importar");
+  if($btnImportar) $btnImportar.addEventListener("click", onImportar);
   document.getElementById("btn-reset").addEventListener("click", borrarTodo);
   document.getElementById("btn-add-cuenta").addEventListener("click", addCuenta);
 
@@ -69,6 +76,16 @@
       input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
       input.addEventListener("input", calcularTotal);
       row.append(label,input); $wrapper.append(row);
+    });
+    calcularTotal();
+  }
+  function setInputsFromSaldos(saldos){
+    const rows = $wrapper.querySelectorAll(".item");
+    rows.forEach(row=>{
+      const name = row.querySelector("label").textContent;
+      const inp = row.querySelector("input");
+      const val = saldos[name]||0;
+      inp.value = numberToEs(val); // acepta €; el parser lo limpia
     });
     calcularTotal();
   }
@@ -95,14 +112,7 @@
     return {total, variacion, varpct};
   }
 
-  // ------- Guardar local + nube (sin auth) -------
-  async function onGuardar(){
-    const fecha = $fecha.value;
-    if(!fecha) return alert("Pon una fecha.");
-    const { total, variacion, varpct } = calcularTotal();
-    const saldos = leerInputs();
-
-    state.registros.push({ fecha, saldos, total, variacion, varpct });
+  function recalcVariaciones(){
     state.registros.sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
     for(let i=0;i<state.registros.length;i++){
       const prev = i>0 ? state.registros[i-1].total : 0;
@@ -110,6 +120,49 @@
       state.registros[i].variacion = t - prev;
       state.registros[i].varpct = prev!==0 ? (t-prev)/prev : 0;
     }
+  }
+
+  function setGuardarLabel(){
+    $btnGuardar.textContent = state.editingIndex>=0 ? "Actualizar registro" : "Guardar registro";
+    // botón cancelar edición dinámico
+    if(state.editingIndex>=0){
+      if(!$btnCancelarEdicion){
+        $btnCancelarEdicion = document.createElement("button");
+        $btnCancelarEdicion.id = "btn-cancelar-edicion";
+        $btnCancelarEdicion.textContent = "Cancelar edición";
+        $btnCancelarEdicion.addEventListener("click", ()=>{
+          state.editingIndex = -1;
+          setGuardarLabel();
+          renderInputs({});
+        });
+        // lo insertamos en la 1ª sección de acciones (debajo de inputs)
+        if($actionsPanels[0]) $actionsPanels[0].appendChild($btnCancelarEdicion);
+      }
+      $btnCancelarEdicion.style.display = "";
+    }else if($btnCancelarEdicion){
+      $btnCancelarEdicion.style.display = "none";
+    }
+  }
+
+  // ------- Guardar local + nube (sin auth) -------
+  async function onGuardar(){
+    const fecha = $fecha.value;
+    if(!fecha) return alert("Pon una fecha.");
+    const { total, variacion, varpct } = calcularTotal();
+    const saldos = leerInputs();
+
+    if(state.editingIndex>=0){
+      // actualizar
+      state.registros[state.editingIndex] = { fecha, saldos, total, variacion, varpct };
+      recalcVariaciones();
+      state.editingIndex = -1;
+      setGuardarLabel();
+    }else{
+      // crear
+      state.registros.push({ fecha, saldos, total, variacion, varpct });
+      recalcVariaciones();
+    }
+
     persistLocal();
     renderTabla();
 
@@ -130,35 +183,44 @@
   }
 
   // ------- Helpers tabla (ocultar/mostrar columnas) -------
-  function setColVisibility(tableEl, colIdx, visible){
-    const rows = tableEl.querySelectorAll("tr");
+  function setColVisibilityByName(tableEl, cols, colName, visible){
+    const idx = cols.indexOf(colName);
+    if(idx<0) return;
+    const rows = tableEl.querySelectorAll("tbody tr");
     rows.forEach(tr=>{
-      const cell = tr.children[colIdx];
+      const cell = tr.children[idx];
       if(cell) cell.style.display = visible ? "" : "none";
     });
+    // header: nunca se oculta; solo marcamos estilo
+    const th = tableEl.querySelector(`thead tr`).children[idx];
+    if(th) th.style.opacity = visible ? "" : "0.55";
   }
-  function makeToggleBtn(colIdx, isHidden){
+  function makeToggleBtn(colName, isHidden){
     const btn = document.createElement("button");
     btn.className = "col-toggle";
     btn.type = "button";
     btn.textContent = isHidden ? "+" : "−";
-    btn.title = isHidden ? "Mostrar columna" : "Ocultar columna";
+    btn.title = isHidden ? `Mostrar ${colName}` : `Ocultar ${colName}`;
     btn.addEventListener("click", () => {
       const table = $tabla.querySelector("table");
-      const nowHidden = !hiddenCols.has(colIdx);
-      if(nowHidden) hiddenCols.add(colIdx); else hiddenCols.delete(colIdx);
+      const cols = currentColsCache; // definido en renderTabla
+      const nowHidden = !hiddenCols.has(colName);
+      if(nowHidden) hiddenCols.add(colName); else hiddenCols.delete(colName);
       saveHiddenCols();
-      setColVisibility(table, colIdx, !nowHidden);
+      setColVisibilityByName(table, cols, colName, !nowHidden);
       btn.textContent = nowHidden ? "+" : "−";
-      btn.title = nowHidden ? "Mostrar columna" : "Ocultar columna";
+      btn.title = nowHidden ? `Mostrar ${colName}` : `Ocultar ${colName}`;
     });
     return btn;
   }
 
-  // ------- Tabla -------
+  let currentColsCache = []; // se actualiza en renderTabla()
+
+  // ------- Tabla (acciones editar/borrar + ocultar columnas) -------
   function renderTabla(){
     const cuentas = state.cuentas;
-    const cols = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"];
+    const cols = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"]; // sin "Acciones"
+    currentColsCache = cols.slice();
 
     const table = document.createElement("table");
     const thead = document.createElement("thead");
@@ -167,26 +229,62 @@
     cols.forEach((c, idx)=>{
       const th=document.createElement("th");
       th.textContent=c;
+      // Botón de ocultar/mostrar para todas salvo la 1ª (Fecha)
       if(idx>0){
-        const toggle = makeToggleBtn(idx, hiddenCols.has(idx));
+        const toggle = makeToggleBtn(c, hiddenCols.has(c));
         th.appendChild(toggle);
       }
       trh.append(th);
     });
+    // Columna Acciones (no ocultable)
+    const thAct = document.createElement("th");
+    thAct.textContent = "Acciones";
+    trh.append(thAct);
+
     thead.append(trh);
 
     const tbody = document.createElement("tbody");
-    state.registros.forEach(r=>{
+    state.registros.forEach((r, idxRow)=>{
       const tr=document.createElement("tr");
+      // Fecha
       const tdF=document.createElement("td"); tdF.textContent=r.fecha; tr.append(tdF);
+      // Cuentas
       cuentas.forEach(c=>{
         const td=document.createElement("td");
         td.textContent = numberToEs(r.saldos[c]||0);
         tr.append(td);
       });
+      // Totales
       const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
       const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
       const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
+
+      // Acciones
+      const tdA=document.createElement("td");
+      const btnE = document.createElement("button");
+      btnE.type="button"; btnE.textContent="✎"; btnE.title="Editar";
+      btnE.addEventListener("click", ()=>{
+        state.editingIndex = idxRow;
+        setGuardarLabel();
+        $fecha.value = r.fecha;
+        renderInputs({});
+        setInputsFromSaldos(r.saldos);
+      });
+      const btnD = document.createElement("button");
+      btnD.type="button"; btnD.textContent="🗑"; btnD.title="Borrar";
+      btnD.addEventListener("click", ()=>{
+        if(!confirm(`Borrar el registro de ${r.fecha}?`)) return;
+        state.registros.splice(idxRow,1);
+        recalcVariaciones();
+        persistLocal();
+        renderTabla();
+        firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+          cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+        }).catch(console.error);
+      });
+      tdA.append(btnE, btnD);
+      tr.append(tdA);
+
       tbody.append(tr);
     });
 
@@ -194,11 +292,11 @@
     $tabla.innerHTML = "";
     $tabla.append(table);
 
-    // ancho mínimo dinámico para evitar colapso visual
-    table.style.minWidth = (cols.length * 140) + "px";
+    // ancho mínimo dinámico para evitar colapso visual (140px por columna visible aprox.)
+    table.style.minWidth = (cols.length * 140 + 120) + "px"; // +acciones
 
-    // aplica visibilidad guardada (no ocultamos columna 0 por defecto, pero si estaba guardado, respetamos)
-    hiddenCols.forEach(idx => setColVisibility(table, idx, false));
+    // aplica visibilidad guardada (solo celdas del cuerpo)
+    hiddenCols.forEach(name => setColVisibilityByName(table, cols, name, false));
   }
 
   // ------- Persistencia local -------
@@ -256,14 +354,8 @@
       const total = Object.values(saldos).reduce((a,b)=>a+b,0);
       registros.push({fecha, saldos, total, variacion:0, varpct:0});
     }
-    registros.sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
-    for(let i=0;i<registros.length;i++){
-      const prev = i>0 ? registros[i-1].total : 0;
-      const t = registros[i].total;
-      registros[i].variacion = t - prev;
-      registros[i].varpct = prev!==0 ? (t-prev)/prev : 0;
-    }
     state.registros = registros;
+    recalcVariaciones();
     persistLocal();
     renderInputs({});
     renderTabla();
@@ -320,5 +412,6 @@
     renderInputs({});
     renderTabla();
     attachCloudListeners(); // sin auth
+    setGuardarLabel();
   })();
 })();
