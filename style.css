@@ -113,25 +113,56 @@ h1{ margin:0 0 6px 0; font-size:20px; }
 .actions #file-csv{ flex:1 1 220px; min-width:180px; }
 
 /* ===== Tabla (scroll-x interno sin romper layout) ===== */
+/* ===== Tabla (scroll-x interno sin romper layout) ===== */
 .table{
   width:100%;
-  overflow-x:auto;
-  border:1px solid var(--line); border-radius:12px;
+  overflow-x:auto;               /* scroll lateral dentro del contenedor */
+  border:1px solid var(--line);
+  border-radius:12px;
   -webkit-overflow-scrolling:touch;
 }
+
+/* ancho natural de columnas para que no se monten unas sobre otras */
 table{
-  width:100%; border-collapse:collapse;
-  min-width:560px; /* columnas legibles; el scroll se queda dentro de .table */
-  table-layout:fixed;
-}
-th,td{
-  border-bottom:1px solid var(--line);
-  padding:10px; text-align:right; white-space:nowrap;
-}
-th:first-child,td:first-child{
-  text-align:left; background:var(--card);
+  border-collapse:separate;
+  border-spacing:0;
+  width:max-content;             /* crece lo que haga falta */
+  min-width:100%;                /* como mínimo ocupa el ancho del panel */
+  table-layout:auto;             /* deja al navegador calcular anchos */
 }
 
+th,td{
+  border-bottom:1px solid var(--line);
+  padding:10px;
+  text-align:right;
+  white-space:nowrap;            /* evita saltos raros que rompen alturas */
+  background:var(--card);
+}
+
+/* primera columna (Fecha) fija al hacer scroll lateral */
+th:first-child, td:first-child{
+  position:sticky;
+  left:0;
+  z-index:2;
+  text-align:left;
+  box-shadow: 1px 0 0 var(--line); /* separador visual */
+}
+
+/* Botón de ocultar/mostrar columna en cabecera */
+th .col-toggle{
+  margin-left:6px;
+  width:22px; height:22px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#0e121a;
+  color:var(--muted);
+  font-size:14px; line-height:1;
+  cursor:pointer;
+  user-select:none;
+}
+
+/* cuando una columna se oculta por JS, se pone display:none en sus celdas */
 /* En pantallas pequeñas, desactiva sticky para evitar “saltos” que empujan ancho */
 @media (max-width:480px){
   th:first-child, td:first-child{ position:static; }
