@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Mis Cuentas — Fase 1 (Firebase)</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>Mis Cuentas</h1>
+  <nav class="tabs">
+    <button class="tab active">Cuentas</button>
+  </nav>
+</header>
+
+<main>
+  <section class="panel">
+    <div class="row">
+      <label>Fecha</label>
+      <input id="fecha" type="date" />
+    </div>
+
+    <div id="cuentas-wrapper" class="card"></div>
+
+    <div class="row total">
+      <span>TOTAL</span>
+      <strong id="total">0,00 €</strong>
+    </div>
+    <div class="row var">
+      <span>Variación</span>
+      <strong id="variacion">0,00 €</strong>
+    </div>
+    <div class="row var">
+      <span>%Var</span>
+      <strong id="varpct">0,00%</strong>
+    </div>
+
+    <div class="actions">
+      <button id="btn-guardar">Guardar registro</button>
+      <button id="btn-limpiar">Limpiar inputs</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Historial</h2>
+    <div class="actions">
+      <input id="file-csv" type="file" accept=".csv" />
+      <button id="btn-importar">Importar CSV</button>
+      <button id="btn-exportar">Exportar CSV</button>
+      <button id="btn-add-cuenta">Añadir cuenta</button>
+      <button id="btn-reset">Borrar todo</button>
+      <span id="status" style="margin-left:auto;"></span>
+    </div>
+    <div id="tabla-historial" class="table"></div>
+  </section>
+</main>
+
+<!-- Firebase (compat no modular) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // RELLENA con tu config (la misma de tus otros chats/proyecto)
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://TU_PROJECT_ID-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "TU_PROJECT_ID",
+    storageBucket: "TU_PROJECT_ID.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+<script src="app.js"></script>
+</body>
+</html>
