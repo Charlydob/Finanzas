@@ -13,12 +13,24 @@
   // ------- Estado -------
   const KEY_DATA = "mis_cuentas_fase1_data";
   const KEY_CUENTAS = "mis_cuentas_fase1_cuentas";
+  const KEY_UID = "mis_cuentas_uid";
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
   ];
+
+  // UID local (sin auth)
+  function getOrCreateUid(){
+    let id = localStorage.getItem(KEY_UID);
+    if(!id){
+      id = "u_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(KEY_UID, id);
+    }
+    return id;
+  }
+
   const state = {
-    uid: null,
+    uid: getOrCreateUid(),
     cuentas: JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
     registros: JSON.parse(localStorage.getItem(KEY_DATA)) || []
   };
@@ -31,6 +43,7 @@
   const $varpct = document.getElementById("varpct");
   const $tabla = document.getElementById("tabla-historial");
   const $status = document.getElementById("status");
+  function setStatus(txt){ $status.textContent = txt||""; }
 
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
   document.getElementById("btn-limpiar").addEventListener("click", () => renderInputs({}));
@@ -39,15 +52,14 @@
   document.getElementById("btn-reset").addEventListener("click", borrarTodo);
   document.getElementById("btn-add-cuenta").addEventListener("click", addCuenta);
 
-  function setStatus(txt){ $status.textContent = txt||""; }
-
   // ------- Render inputs -------
   function renderInputs(valores){
     $wrapper.innerHTML = "";
     state.cuentas.forEach(c => {
       const row = document.createElement("div"); row.className="item";
       const label = document.createElement("label"); label.textContent=c;
-      const input = document.createElement("input"); input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €";
+      const input = document.createElement("input");
+      input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €"; input.autocomplete="off";
       input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
       input.addEventListener("input", calcularTotal);
       row.append(label,input); $wrapper.append(row);
@@ -77,9 +89,8 @@
     return {total, variacion, varpct};
   }
 
-  // ------- Guardar local+cloud -------
+  // ------- Guardar local + nube (sin auth) -------
   async function onGuardar(){
-    if(!state.uid){ alert("Conectando… espera un segundo y vuelve a guardar."); return; }
     const fecha = $fecha.value;
     if(!fecha) return alert("Pon una fecha.");
     const { total, variacion, varpct } = calcularTotal();
@@ -102,15 +113,13 @@
       await ref.set({
         cuentas: state.cuentas,
         registros: state.registros,
-        updatedAt: Date.now()
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
       setStatus("✔ Guardado");
-      setTimeout(()=>setStatus(""),1500);
-      alert("Guardado.");
+      setTimeout(()=>setStatus(""),1200);
     }catch(e){
       console.error(e);
-      setStatus("✖ Error guardando");
-      alert("Error guardando en la nube.");
+      setStatus("✖ Error guardando (revisa reglas RTDB)");
     }
   }
 
@@ -208,16 +217,14 @@
     persistLocal();
     renderInputs({});
     renderTabla();
-    if(state.uid){
-      try{
-        setStatus("Sincronizando…");
-        await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-          cuentas: state.cuentas, registros: state.registros, updatedAt: Date.now()
-        });
-        setStatus("✔ Sincronizado");
-        setTimeout(()=>setStatus(""),1500);
-      }catch(e){ console.error(e); setStatus("✖ Error sync"); }
-    }
+    try{
+      setStatus("Sincronizando…");
+      await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+        cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      setStatus("✔ Sincronizado");
+      setTimeout(()=>setStatus(""),1200);
+    }catch(e){ console.error(e); setStatus("✖ Error sync"); }
   }
 
   function borrarTodo(){
@@ -225,11 +232,9 @@
     state.registros = [];
     persistLocal();
     renderTabla();
-    if(state.uid){
-      firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas, registros: [], updatedAt: Date.now()
-      }).catch(console.error);
-    }
+    firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+      cuentas: state.cuentas, registros: [], updatedAt: firebase.database.ServerValue.TIMESTAMP
+    }).catch(console.error);
   }
 
   function addCuenta(){
@@ -240,55 +245,30 @@
     persistLocal();
     renderInputs({});
     renderTabla();
-    if(state.uid){
-      firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
-    }
+    firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
   }
 
-  // ------- Cloud sync (escucha remota) -------
+  // ------- Listener remoto (opcional) -------
   function attachCloudListeners(){
     const base = firebase.database().ref(`/users/${state.uid}/finanzas/fase1`);
     base.on("value", snap=>{
-      const v = snap.val();
-      if(!v) return;
-      // última escritura gana (updatedAt):
-      const localUpdated = 0; // local no guarda timestamp; preferimos cloud si existe
-      const cloudUpdated = v.updatedAt || 0;
-      if(cloudUpdated >= localUpdated){
-        if (Array.isArray(v.cuentas) && v.cuentas.length) state.cuentas = v.cuentas;
-        if (Array.isArray(v.registros)) state.registros = v.registros;
-        persistLocal();
-        renderInputs({});
-        renderTabla();
-        setStatus("↻ Actualizado desde la nube");
-        setTimeout(()=>setStatus(""),1200);
-      }
+      const v = snap.val(); if(!v) return;
+      if (Array.isArray(v.cuentas) && v.cuentas.length) state.cuentas = v.cuentas;
+      if (Array.isArray(v.registros)) state.registros = v.registros;
+      persistLocal();
+      renderInputs({});
+      renderTabla();
+      setStatus("↻ Actualizado desde la nube");
+      setTimeout(()=>setStatus(""),1000);
     });
   }
 
-  // ------- Auth anónima + init -------
-  function initUI(){
+  // ------- Init -------
+  (function init(){
     const today = new Date(); const y=today.getFullYear(); const m=String(today.getMonth()+1).padStart(2,"0"); const d=String(today.getDate()).padStart(2,"0");
     document.getElementById("fecha").value = `${y}-${m}-${d}`;
     renderInputs({});
     renderTabla();
-  }
-
-  firebase.auth().onAuthStateChanged(async (user)=>{
-    if(user){
-      state.uid = user.uid;
-      setStatus("Conectado");
-      attachCloudListeners();
-    }else{
-      setStatus("Conectando…");
-      try{
-        await firebase.auth().signInAnonymously();
-      }catch(e){
-        console.error(e);
-        setStatus("Auth error");
-      }
-    }
-  });
-
-  initUI();
+    attachCloudListeners(); // ya sin auth
+  })();
 })();

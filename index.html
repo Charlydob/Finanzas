@@ -2,7 +2,10 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"
+  />
   <title>Mis Cuentas — Fase 1 (Firebase)</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -56,13 +59,12 @@
   </section>
 </main>
 
-<!-- Firebase compat (no ES modules) -->
+<!-- Firebase (compat, sin módulos y SIN auth) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // Config real proporcionada
+  // Config real
   const firebaseConfig = {
     apiKey: "AIzaSyDNsjnKXfbOFlOh8e_NfFO94-5pfDQdelE",
     authDomain: "finanz-7963a.firebaseapp.com",
@@ -72,7 +74,6 @@
     messagingSenderId: "649084249626",
     appId: "1:649084249626:web:e00d0febe23fa4221cd3a3"
   };
-  // Inicializa Firebase (compat, sin módulos)
   firebase.initializeApp(firebaseConfig);
 </script>
 
