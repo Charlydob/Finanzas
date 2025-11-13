@@ -14,6 +14,7 @@
   const KEY_DATA = "mis_cuentas_fase1_data";
   const KEY_CUENTAS = "mis_cuentas_fase1_cuentas";
   const KEY_UID = "mis_cuentas_uid";
+  const KEY_HIDDEN_COLS = "mis_cuentas_hidden_cols";
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
@@ -34,6 +35,10 @@
     cuentas: JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
     registros: JSON.parse(localStorage.getItem(KEY_DATA)) || []
   };
+
+  // columnas ocultas persistentes (por índice, incluyendo Fecha=0)
+  let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN_COLS) || "[]"));
+  function saveHiddenCols(){ localStorage.setItem(KEY_HIDDEN_COLS, JSON.stringify([...hiddenCols])); }
 
   // ------- DOM -------
   const $fecha = document.getElementById("fecha");
@@ -60,6 +65,7 @@
       const label = document.createElement("label"); label.textContent=c;
       const input = document.createElement("input");
       input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €"; input.autocomplete="off";
+      input.style.fontSize = "16px"; // anti-zoom iOS
       input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
       input.addEventListener("input", calcularTotal);
       row.append(label,input); $wrapper.append(row);
@@ -123,15 +129,52 @@
     }
   }
 
+  // ------- Helpers tabla (ocultar/mostrar columnas) -------
+  function setColVisibility(tableEl, colIdx, visible){
+    const rows = tableEl.querySelectorAll("tr");
+    rows.forEach(tr=>{
+      const cell = tr.children[colIdx];
+      if(cell) cell.style.display = visible ? "" : "none";
+    });
+  }
+  function makeToggleBtn(colIdx, isHidden){
+    const btn = document.createElement("button");
+    btn.className = "col-toggle";
+    btn.type = "button";
+    btn.textContent = isHidden ? "+" : "−";
+    btn.title = isHidden ? "Mostrar columna" : "Ocultar columna";
+    btn.addEventListener("click", () => {
+      const table = $tabla.querySelector("table");
+      const nowHidden = !hiddenCols.has(colIdx);
+      if(nowHidden) hiddenCols.add(colIdx); else hiddenCols.delete(colIdx);
+      saveHiddenCols();
+      setColVisibility(table, colIdx, !nowHidden);
+      btn.textContent = nowHidden ? "+" : "−";
+      btn.title = nowHidden ? "Mostrar columna" : "Ocultar columna";
+    });
+    return btn;
+  }
+
   // ------- Tabla -------
   function renderTabla(){
     const cuentas = state.cuentas;
     const cols = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"];
+
     const table = document.createElement("table");
     const thead = document.createElement("thead");
     const trh = document.createElement("tr");
-    cols.forEach(c=>{ const th=document.createElement("th"); th.textContent=c; trh.append(th); });
+
+    cols.forEach((c, idx)=>{
+      const th=document.createElement("th");
+      th.textContent=c;
+      if(idx>0){
+        const toggle = makeToggleBtn(idx, hiddenCols.has(idx));
+        th.appendChild(toggle);
+      }
+      trh.append(th);
+    });
     thead.append(trh);
+
     const tbody = document.createElement("tbody");
     state.registros.forEach(r=>{
       const tr=document.createElement("tr");
@@ -146,9 +189,16 @@
       const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
       tbody.append(tr);
     });
+
     table.append(thead, tbody);
     $tabla.innerHTML = "";
     $tabla.append(table);
+
+    // ancho mínimo dinámico para evitar colapso visual
+    table.style.minWidth = (cols.length * 140) + "px";
+
+    // aplica visibilidad guardada (no ocultamos columna 0 por defecto, pero si estaba guardado, respetamos)
+    hiddenCols.forEach(idx => setColVisibility(table, idx, false));
   }
 
   // ------- Persistencia local -------
@@ -269,6 +319,6 @@
     document.getElementById("fecha").value = `${y}-${m}-${d}`;
     renderInputs({});
     renderTabla();
-    attachCloudListeners(); // ya sin auth
+    attachCloudListeners(); // sin auth
   })();
 })();
