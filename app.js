@@ -14,7 +14,7 @@
   const KEY_DATA = "mis_cuentas_fase1_data";
   const KEY_CUENTAS = "mis_cuentas_fase1_cuentas";
   const KEY_UID = "mis_cuentas_uid";
-  const KEY_HIDDEN_COLS = "mis_cuentas_hidden_cols_by_name"; // guardamos NOMBRES, no índices
+  const KEY_HIDDEN_COLS = "mis_cuentas_hidden_cols_by_name"; // guardamos NOMBRES
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
@@ -85,7 +85,7 @@
       const name = row.querySelector("label").textContent;
       const inp = row.querySelector("input");
       const val = saldos[name]||0;
-      inp.value = numberToEs(val); // acepta €; el parser lo limpia
+      inp.value = numberToEs(val);
     });
     calcularTotal();
   }
@@ -124,7 +124,6 @@
 
   function setGuardarLabel(){
     $btnGuardar.textContent = state.editingIndex>=0 ? "Actualizar registro" : "Guardar registro";
-    // botón cancelar edición dinámico
     if(state.editingIndex>=0){
       if(!$btnCancelarEdicion){
         $btnCancelarEdicion = document.createElement("button");
@@ -135,7 +134,6 @@
           setGuardarLabel();
           renderInputs({});
         });
-        // lo insertamos en la 1ª sección de acciones (debajo de inputs)
         if($actionsPanels[0]) $actionsPanels[0].appendChild($btnCancelarEdicion);
       }
       $btnCancelarEdicion.style.display = "";
@@ -152,13 +150,11 @@
     const saldos = leerInputs();
 
     if(state.editingIndex>=0){
-      // actualizar
       state.registros[state.editingIndex] = { fecha, saldos, total, variacion, varpct };
       recalcVariaciones();
       state.editingIndex = -1;
       setGuardarLabel();
     }else{
-      // crear
       state.registros.push({ fecha, saldos, total, variacion, varpct });
       recalcVariaciones();
     }
@@ -186,14 +182,21 @@
   function setColVisibilityByName(tableEl, cols, colName, visible){
     const idx = cols.indexOf(colName);
     if(idx<0) return;
-    const rows = tableEl.querySelectorAll("tbody tr");
-    rows.forEach(tr=>{
+    // body
+    tableEl.querySelectorAll("tbody tr").forEach(tr=>{
       const cell = tr.children[idx];
       if(cell) cell.style.display = visible ? "" : "none";
     });
-    // header: nunca se oculta; solo marcamos estilo
-    const th = tableEl.querySelector(`thead tr`).children[idx];
-    if(th) th.style.opacity = visible ? "" : "0.55";
+    // header: mantenemos visible para poder reactivar (+), solo bajamos opacidad
+    const th = tableEl.querySelector("thead tr").children[idx];
+    if(th){
+      th.classList.toggle("col-hidden", !visible);
+      const btn = th.querySelector(".col-toggle");
+      if(btn){
+        btn.textContent = visible ? "−" : "+";
+        btn.title = visible ? `Ocultar ${colName}` : `Mostrar ${colName}`;
+      }
+    }
   }
   function makeToggleBtn(colName, isHidden){
     const btn = document.createElement("button");
@@ -203,23 +206,21 @@
     btn.title = isHidden ? `Mostrar ${colName}` : `Ocultar ${colName}`;
     btn.addEventListener("click", () => {
       const table = $tabla.querySelector("table");
-      const cols = currentColsCache; // definido en renderTabla
+      const cols = currentColsCache;
       const nowHidden = !hiddenCols.has(colName);
       if(nowHidden) hiddenCols.add(colName); else hiddenCols.delete(colName);
       saveHiddenCols();
       setColVisibilityByName(table, cols, colName, !nowHidden);
-      btn.textContent = nowHidden ? "+" : "−";
-      btn.title = nowHidden ? `Mostrar ${colName}` : `Ocultar ${colName}`;
     });
     return btn;
   }
 
-  let currentColsCache = []; // se actualiza en renderTabla()
+  let currentColsCache = [];
 
-  // ------- Tabla (acciones editar/borrar + ocultar columnas) -------
+  // ------- Tabla (editar/borrar + ocultar columnas) -------
   function renderTabla(){
     const cuentas = state.cuentas;
-    const cols = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"]; // sin "Acciones"
+    const cols = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"]; // sin Acciones
     currentColsCache = cols.slice();
 
     const table = document.createElement("table");
@@ -228,11 +229,16 @@
 
     cols.forEach((c, idx)=>{
       const th=document.createElement("th");
-      th.textContent=c;
-      // Botón de ocultar/mostrar para todas salvo la 1ª (Fecha)
+      th.className = "col-header";
+      if(idx===0) th.classList.add("sticky-col");
+      // título + botón (para que el +/− SIEMPRE sea visible)
+      const title = document.createElement("span");
+      title.className = "col-title";
+      title.textContent = c;
+      th.append(title);
       if(idx>0){
         const toggle = makeToggleBtn(c, hiddenCols.has(c));
-        th.appendChild(toggle);
+        th.append(toggle);
       }
       trh.append(th);
     });
@@ -246,8 +252,10 @@
     const tbody = document.createElement("tbody");
     state.registros.forEach((r, idxRow)=>{
       const tr=document.createElement("tr");
-      // Fecha
-      const tdF=document.createElement("td"); tdF.textContent=r.fecha; tr.append(tdF);
+      // Fecha (sticky)
+      const tdF=document.createElement("td");
+      tdF.className = "sticky-col";
+      tdF.textContent=r.fecha; tr.append(tdF);
       // Cuentas
       cuentas.forEach(c=>{
         const td=document.createElement("td");
@@ -261,8 +269,9 @@
 
       // Acciones
       const tdA=document.createElement("td");
+      tdA.className = "actions-cell";
       const btnE = document.createElement("button");
-      btnE.type="button"; btnE.textContent="✎"; btnE.title="Editar";
+      btnE.type="button"; btnE.className="row-btn"; btnE.textContent="✎"; btnE.title="Editar";
       btnE.addEventListener("click", ()=>{
         state.editingIndex = idxRow;
         setGuardarLabel();
@@ -271,7 +280,7 @@
         setInputsFromSaldos(r.saldos);
       });
       const btnD = document.createElement("button");
-      btnD.type="button"; btnD.textContent="🗑"; btnD.title="Borrar";
+      btnD.type="button"; btnD.className="row-btn"; btnD.textContent="🗑"; btnD.title="Borrar";
       btnD.addEventListener("click", ()=>{
         if(!confirm(`Borrar el registro de ${r.fecha}?`)) return;
         state.registros.splice(idxRow,1);
@@ -292,10 +301,10 @@
     $tabla.innerHTML = "";
     $tabla.append(table);
 
-    // ancho mínimo dinámico para evitar colapso visual (140px por columna visible aprox.)
-    table.style.minWidth = (cols.length * 140 + 120) + "px"; // +acciones
+    // ancho mínimo para que no se colapse (140px por col aprox + 120 acciones)
+    table.style.minWidth = (cols.length * 140 + 120) + "px";
 
-    // aplica visibilidad guardada (solo celdas del cuerpo)
+    // aplica visibilidad guardada
     hiddenCols.forEach(name => setColVisibilityByName(table, cols, name, false));
   }
 
