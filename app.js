@@ -47,6 +47,8 @@
 
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
   document.getElementById("btn-limpiar").addEventListener("click", () => renderInputs({}));
+  document.getElementById("btn-exportar").addEventListener("click", onExportar);
+  document.getElementById("btn-importar").addEventListener("click", onImportar);
   document.getElementById("btn-reset").addEventListener("click", borrarTodo);
   document.getElementById("btn-add-cuenta").addEventListener("click", addCuenta);
 
@@ -57,11 +59,7 @@
       const row = document.createElement("div"); row.className="item";
       const label = document.createElement("label"); label.textContent=c;
       const input = document.createElement("input");
-      input.type="text";
-      input.inputMode="decimal";
-      input.placeholder="0,00 €";
-      input.autocomplete="off";
-      input.style.fontSize = "16px"; // anti-zoom iOS reforzado
+      input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €"; input.autocomplete="off";
       input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
       input.addEventListener("input", calcularTotal);
       row.append(label,input); $wrapper.append(row);
@@ -159,7 +157,76 @@
     localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
   }
 
-  // ------- Borrar / Añadir cuenta -------
+  // ------- CSV -------
+  function registrosToCSV(){
+    const cuentas = state.cuentas;
+    const headers = ["Fecha", ...cuentas, "TOTAL","Variación","%Var"];
+    const rows = [headers.join(",")];
+    state.registros.forEach(r=>{
+      const vals = cuentas.map(c => (r.saldos[c]||0).toFixed(2));
+      const total = r.total.toFixed(2);
+      const vari = r.variacion.toFixed(2);
+      const varp = (r.varpct*100).toFixed(2)+"%";
+      rows.push([r.fecha, ...vals, total, vari, varp].join(","));
+    });
+    return rows.join("\n");
+  }
+  function download(filename, text){
+    const blob = new Blob([text],{type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function onExportar(){ download("mis_cuentas_fase1.csv", registrosToCSV()); }
+
+  async function onImportar(){
+    const file = document.getElementById("file-csv").files[0];
+    if(!file){ alert("Selecciona un CSV."); return; }
+    const txt = await file.text();
+    const lines = txt.trim().split(/\r?\n/);
+    const headers = lines[0].split(",");
+    const fechaIdx = headers.indexOf("Fecha");
+    const cuentas = headers.filter(h => !["Fecha","TOTAL","Variación","%Var"].includes(h));
+    if (cuentas.length){
+      state.cuentas = cuentas;
+      persistLocal();
+    }
+    const registros = [];
+    for(let i=1;i<lines.length;i++){
+      const cols = lines[i].split(",");
+      if(!cols[fechaIdx]) continue;
+      const fecha = cols[fechaIdx];
+      const saldos = {};
+      state.cuentas.forEach(c=>{
+        const colIdx = headers.indexOf(c);
+        saldos[c] = esToNumber(cols[colIdx]);
+      });
+      const total = Object.values(saldos).reduce((a,b)=>a+b,0);
+      registros.push({fecha, saldos, total, variacion:0, varpct:0});
+    }
+    registros.sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
+    for(let i=0;i<registros.length;i++){
+      const prev = i>0 ? registros[i-1].total : 0;
+      const t = registros[i].total;
+      registros[i].variacion = t - prev;
+      registros[i].varpct = prev!==0 ? (t-prev)/prev : 0;
+    }
+    state.registros = registros;
+    persistLocal();
+    renderInputs({});
+    renderTabla();
+    try{
+      setStatus("Sincronizando…");
+      await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+        cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      setStatus("✔ Sincronizado");
+      setTimeout(()=>setStatus(""),1200);
+    }catch(e){ console.error(e); setStatus("✖ Error sync"); }
+  }
+
   function borrarTodo(){
     if(!confirm("Borrar todos los datos?")) return;
     state.registros = [];
@@ -202,6 +269,6 @@
     document.getElementById("fecha").value = `${y}-${m}-${d}`;
     renderInputs({});
     renderTabla();
-    attachCloudListeners(); // sin auth
+    attachCloudListeners(); // ya sin auth
   })();
 })();
