@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
   <title>Mis Cuentas — Fase 1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -12,10 +16,16 @@
   <nav class="tabs"><button class="tab active">Cuentas</button></nav>
 </header>
 
-<main>
+
 <main>
   <!-- DASHBOARD -->
   <section class="paneldashboard">
+
+    <div class="total-header">
+      <span></span>
+      <div id="total-actual" class="total-actual">0,00 €</div>
+    </div>
+
     <div class="actions">
       <button id="btn-abrir-modal">Actualizar</button>
       <select id="periodo">
@@ -27,9 +37,11 @@
       <span id="var-total" class="var-total">Mes: 0,00 € (0,00%)</span>
       <span id="status" style="margin-left:auto;"></span>
     </div>
+
     <div id="dashboard" class="cards"></div>
   </section>
 </main>
+
 
 <!-- MODAL HISTORIAL -->
 <div id="modal-historial" class="modal" aria-hidden="true">

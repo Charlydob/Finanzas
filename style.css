@@ -15,7 +15,11 @@ body {
   color: #eaeef5;
   font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
   overflow-x: hidden;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
 
 
 /* Contenedor centrado y ancho fijo de app móvil */
@@ -280,4 +284,25 @@ body.trend-neutral{
   font-size: 12px;
   opacity: 0.85;
   text-align: center;
+}
+/* Saldo total actual encima del dashboard */
+.total-header{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-bottom:10px;
+}
+
+.total-header > span{
+  font-size:13px;
+  color:var(--muted);
+}
+
+.total-actual{
+  font-size:48px;
+  font-weight:600;
+  letter-spacing:0.03em;
+  border-radius:16px;
+  border:px solid var(--line);
+  align-self:flex-end;
 }

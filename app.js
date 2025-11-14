@@ -25,6 +25,7 @@
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
   function saveHidden(){ localStorage.setItem(KEY_HIDDEN, JSON.stringify([...hiddenCols])); }
 
+   // ------- DOM -------
   // ------- DOM -------
   const $fecha = document.getElementById("fecha");
   const $wrapper = document.getElementById("cuentas-wrapper");
@@ -35,6 +36,7 @@
   const $restore = document.getElementById("col-restore");
   const $status = document.getElementById("status");
   const $dashboard = document.getElementById("dashboard");
+  const $totalActual = document.getElementById("total-actual");
 
   // modales
   const $modal = document.getElementById("modal");
@@ -54,6 +56,7 @@
   const $btnCerrarModalCuenta = document.getElementById("btn-cerrar-modal-cuenta");
   const $cuentaChart = document.getElementById("cuenta-chart");
   const $cuentaHistBody = document.getElementById("cuenta-historial-body");
+  const $cuentaTooltip = document.getElementById("cuenta-tooltip");
 
   const $varTotal = document.getElementById("var-total");
   const $body = document.body;
@@ -87,20 +90,21 @@
   if ($btnCerrarModalCuenta) $btnCerrarModalCuenta.addEventListener("click", closeCuentaModal);
   if ($modalCuentaBackdrop) $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
 
-  // ------- Modales -------
   function openModal(){
-    $modal.setAttribute("aria-hidden", "false");
+    if ($modal) $modal.setAttribute("aria-hidden","false");
   }
+
   function closeModal(){
-    $modal.setAttribute("aria-hidden", "true");
+    if ($modal) $modal.setAttribute("aria-hidden","true");
     state.editingIndex = -1;
     setGuardarLabel();
   }
 
   function openHistorialModal(){
-    if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden", "false");
+    if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden","false");
   }
-  function closeHistorialModal(){
+
+function closeHistorialModal(){
     if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden", "true");
   }
 
@@ -111,6 +115,7 @@
     buildCuentaDetalle(nombreCuenta);
     $modalCuenta.setAttribute("aria-hidden", "false");
   }
+
   function closeCuentaModal(){
     if ($modalCuenta) $modalCuenta.setAttribute("aria-hidden", "true");
     state.cuentaSeleccionada = null;
@@ -130,6 +135,7 @@
     });
   }
 
+
   function setInputsFromSaldos(s){
     $wrapper.querySelectorAll(".item").forEach(row=>{
       const name=row.querySelector("label").textContent;
@@ -140,14 +146,32 @@
     calcularTotal();
   }
   function leerInputs(){
-    const saldos={};
+    const saldos = {};
+
+    // base: último valor conocido de cada cuenta
+    let baseSaldos = {};
+    if (state.editingIndex >= 0 && state.registros[state.editingIndex]){
+      baseSaldos = state.registros[state.editingIndex].saldos || {};
+    } else if (state.registros.length){
+      baseSaldos = state.registros[state.registros.length - 1].saldos || {};
+    }
+
     [].slice.call($wrapper.querySelectorAll(".item")).forEach(row=>{
-      const name=row.querySelector("label").textContent;
-      const val=row.querySelector("input").value;
-      saldos[name]=esToNumber(val);
+      const name  = row.querySelector("label").textContent;
+      const input = row.querySelector("input");
+      const raw   = input.value.trim();
+
+      if (raw === ""){
+        const prev = baseSaldos[name];
+        saldos[name] = Number.isFinite(prev) ? prev : 0;
+      } else {
+        saldos[name] = esToNumber(raw);
+      }
     });
+
     return saldos;
   }
+
 
   // ------- Cálculo -------
   function calcularTotal(){
@@ -354,17 +378,17 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
   // Render tarjetas
   function renderDashboard(){
+    // total actual = último registro
+    if ($totalActual){
+      const lastTotal = state.registros.length
+        ? state.registros[state.registros.length - 1].total
+        : 0;
+      $totalActual.textContent = numberToEs(lastTotal);
+    }
+
     $dashboard.innerHTML="";
     if(!state.registros.length){
       $dashboard.innerHTML = '<div class="muted">Sin datos. Pulsa “Actualizar”.</div>';
-      if ($varTotal) {
-        $varTotal.textContent = "Mes: 0,00 € (0,00%)";
-        $varTotal.className = "var-total";
-      }
-      if ($body) {
-        $body.classList.remove("trend-pos","trend-neg","trend-neutral");
-        $body.classList.add("trend-neutral");
-      }
       return;
     }
 
@@ -529,6 +553,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     ctx.clearRect(0,0,w,h);
 
+    // Datos crudos
     const xsTime = puntos.map(p => new Date(p.fecha).getTime());
     const ysVal  = puntos.map(p => p.valor);
 
@@ -536,14 +561,14 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     let maxX = Math.max(...xsTime);
     if (minX === maxX) maxX = minX + 24*60*60*1000; // un día de margen
 
-    let minY = 0;
+    const minY = 0;
     let maxY = Math.max(...ysVal);
     if (!isFinite(maxY) || maxY <= 0) maxY = 1;
 
     const xScale = t => padding + ((t - minX) / (maxX - minX)) * (w - 2*padding);
     const yScale = v => h - padding - ((v - minY) / (maxY - minY)) * (h - 2*padding);
 
-    // puntos proyectados al canvas
+    // Puntos proyectados al canvas
     const points = puntos.map(p => {
       const t = new Date(p.fecha).getTime();
       return {
@@ -554,7 +579,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       };
     });
 
-    // guardar para interacción
+    // guardar para la interacción tipo Revolut
     canvas._chartData = {
       points,
       minX,
@@ -579,7 +604,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     ctx.stroke();
     ctx.restore();
 
-    // línea suavizada
+    // línea suavizada Catmull–Rom → Bézier (SIEMPRE pasa por los puntos)
     ctx.save();
     ctx.strokeStyle = "#67d5ff";
     ctx.lineWidth = 2;
@@ -589,13 +614,19 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       ctx.lineTo(points[0].x, points[0].y);
     } else {
       ctx.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length - 1; i++){
-        const xc = (points[i].x + points[i+1].x) / 2;
-        const yc = (points[i].y + points[i+1].y) / 2;
-        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      for (let i = 0; i < points.length - 1; i++){
+        const p0 = i > 0 ? points[i-1] : points[i];
+        const p1 = points[i];
+        const p2 = points[i+1];
+        const p3 = i+2 < points.length ? points[i+2] : p2;
+
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
       }
-      const last = points[points.length - 1];
-      ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
     }
     ctx.stroke();
     ctx.restore();
@@ -603,7 +634,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     // puntos coloreados según subida/bajada
     ctx.save();
     for (let i = 0; i < points.length; i++){
-      let color = "#cccccc"; // primero neutro
+      let color = "#cccccc"; // primero
       if (i > 0){
         const diff = points[i].valor - points[i-1].valor;
         if (diff > 0) color = "#35c759";
@@ -616,7 +647,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     }
     ctx.restore();
 
-    // cursor interactivo tipo Revolut
+    // cursor interactivo (línea vertical + punto + tooltip), usando canvas._hoverT
     if (typeof canvas._hoverT === "number"){
       const hoverT = canvas._hoverT;
       const tooltipEl = document.getElementById("cuenta-tooltip");
@@ -678,6 +709,7 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       }
     }
   }
+
 
 
   // Listener de periodo
@@ -792,13 +824,16 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       draggingCuenta = true;
       updateCuentaHover(evt);
     });
+
     $cuentaChart.addEventListener("pointermove", evt => {
       if (!draggingCuenta) return;
       updateCuentaHover(evt);
     });
+
     window.addEventListener("pointerup", () => {
       draggingCuenta = false;
     });
+
     $cuentaChart.addEventListener("pointerleave", () => {
       draggingCuenta = false;
     });
