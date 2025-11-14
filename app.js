@@ -119,7 +119,9 @@ function closeHistorialModal(){
   function closeCuentaModal(){
     if ($modalCuenta) $modalCuenta.setAttribute("aria-hidden", "true");
     state.cuentaSeleccionada = null;
+    document.querySelectorAll(".row-menu.open").forEach(m => m.classList.remove("open"));
   }
+
 
   function renderInputs(valores){
     $wrapper.innerHTML="";
@@ -467,28 +469,35 @@ function setColVisibilityByName(tableEl, cols, name, visible){
   function buildCuentaDetalle(nombreCuenta){
     if (!$cuentaHistBody || !$cuentaChart) return;
 
-    const regsOrdenados = state.registros.slice().sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
+    // limpiar menús anteriores
+    document.querySelectorAll(".row-menu").forEach(el => el.remove());
+
+    const regsOrdenados = state.registros
+      .map((r, idx) => ({ ...r, _idx: idx }))
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
     const puntos = [];
 
-    regsOrdenados.forEach(r=>{
+    regsOrdenados.forEach(r => {
       if (!r.saldos) return;
       const v = r.saldos[nombreCuenta];
       if (!Number.isFinite(v)) return;
-      puntos.push({ fecha: r.fecha, valor: v });
+      puntos.push({ fecha: r.fecha, valor: v, _idx: r._idx });
     });
 
     const ctx = $cuentaChart.getContext("2d");
-    ctx.clearRect(0,0,$cuentaChart.width,$cuentaChart.height);
+    ctx.clearRect(0, 0, $cuentaChart.width, $cuentaChart.height);
 
     $cuentaHistBody.innerHTML = "";
     if (!puntos.length){
+      if ($cuentaTooltip) $cuentaTooltip.textContent = "Sin movimientos para esta cuenta.";
       return;
     }
 
     let prevVal = null;
     let lastDiff = 0;
 
-    puntos.forEach(p=>{
+    puntos.forEach(p => {
       let diffStr = "—";
       let pctStr = "—";
       let diff = 0;
@@ -505,6 +514,8 @@ function setColVisibilityByName(tableEl, cols, name, visible){
         }
         lastDiff = diff;
       }
+
+      const reg = state.registros[p._idx];
 
       const tr = document.createElement("tr");
 
@@ -528,7 +539,96 @@ function setColVisibilityByName(tableEl, cols, name, visible){
         tdDiffPct.classList.add("pos");
       }
 
-      tr.append(tdFecha, tdValor, tdDiffEur, tdDiffPct);
+      // ---- Celda acciones con menú flotante ----
+      const tdAcc = document.createElement("td");
+      tdAcc.className = "actions-cell";
+
+      const dotsBtn = document.createElement("button");
+      dotsBtn.type = "button";
+      dotsBtn.className = "dots-btn";
+      dotsBtn.textContent = "⋮";
+      dotsBtn.title = "Acciones";
+
+      const menu = document.createElement("div");
+      menu.className = "row-menu";
+
+      const btnEdit = document.createElement("button");
+      btnEdit.type = "button";
+      btnEdit.textContent = "Editar";
+
+      btnEdit.addEventListener("click", () => {
+        if (!reg) return;
+        state.editingIndex = p._idx;
+        setGuardarLabel();
+        if ($fecha) $fecha.value = reg.fecha;
+        renderInputs({});
+        if (reg.saldos) setInputsFromSaldos(reg.saldos);
+        closeCuentaModal();
+        openModal();
+      });
+
+      const btnDelete = document.createElement("button");
+      btnDelete.type = "button";
+      btnDelete.textContent = "Eliminar";
+
+      btnDelete.addEventListener("click", () => {
+        if (!reg) return;
+        if (!confirm(`Borrar el registro de ${reg.fecha}?`)) return;
+        state.registros.splice(p._idx, 1);
+        recalcVariaciones();
+        persistLocal();
+        renderTabla();
+        renderDashboard();
+        if (window.firebase && state.uid){
+          firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+            cuentas: state.cuentas,
+            registros: state.registros,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          }).catch(console.error);
+        }
+        buildCuentaDetalle(nombreCuenta);
+      });
+
+      menu.append(btnEdit, btnDelete);
+
+      // menú se cuelga del body, no de la celda → no empuja tabla
+      document.body.append(menu);
+
+      dotsBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        // cerrar otros menús abiertos
+        document.querySelectorAll(".row-menu.open").forEach(m => {
+          if (m !== menu) m.classList.remove("open");
+        });
+
+        const isOpen = menu.classList.contains("open");
+        if (isOpen){
+          menu.classList.remove("open");
+          return;
+        }
+
+        // calcular posición flotante respecto al botón
+        const rect = dotsBtn.getBoundingClientRect();
+        const menuWidth = 140; // aproximado
+        const top = rect.bottom + 6;
+        const left = Math.max(8, rect.right - menuWidth);
+
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.classList.add("open");
+
+        const closeMenu = (ev) => {
+          if (!menu.contains(ev.target) && ev.target !== dotsBtn){
+            menu.classList.remove("open");
+            document.removeEventListener("click", closeMenu);
+          }
+        };
+        document.addEventListener("click", closeMenu);
+      });
+
+      tdAcc.append(dotsBtn);
+      tr.append(tdFecha, tdValor, tdDiffEur, tdDiffPct, tdAcc);
       $cuentaHistBody.append(tr);
 
       prevVal = p.valor;
@@ -542,6 +642,9 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     drawCuentaChart($cuentaChart, puntos);
   }
+
+
+
 
 
   function drawCuentaChart(canvas, puntos){

@@ -1,7 +1,10 @@
 /* ===== Reset + layout móvil estricto ===== */
 *,
 *::before,
-*::after { box-sizing: border-box; min-width: 0; }
+*::after {
+  box-sizing: border-box;
+  min-width: 0;
+}
 
 html {
   min-height: 100%;
@@ -13,296 +16,592 @@ body {
   min-height: 100vh;
   background: #0d0f12;
   color: #eaeef5;
-  font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
   overflow-x: hidden;
   background-repeat: no-repeat;
   background-attachment: fixed;
   font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-
-
 /* Contenedor centrado y ancho fijo de app móvil */
-.app-wrap, header, main { max-width: 420px; margin: 0 auto; width: 100%; }
-main { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+.app-wrap,
+header,
+main {
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+main {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 /* ===== Tokens ===== */
-:root{
-  --card:#151922; --muted:#98a2b3; --line:#202636; --accent:#7cc0ff; --radius:14px;
-  --ok:#35c759; --bad:#ff453a;
+:root {
+  --card: #151922;
+  --muted: #98a2b3;
+  --line: #202636;
+  --accent: #7cc0ff;
+  --radius: 14px;
+  --ok: #35c759;
+  --bad: #ff453a;
 }
 
 /* ===== Head ===== */
-header{ padding:16px; }
-h1{ margin:0 0 6px 0; font-size:20px; }
-.tabs{ display:flex; gap:8px; }
-.tab{
-  background:var(--card); color:#eaeef5; border:1px solid var(--line);
-  padding:8px 12px; border-radius:999px
+header {
+  padding: 16px;
 }
-.tab.active{ outline:2px solid var(--accent) }
+
+h1 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab {
+  background: var(--card);
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.tab.active {
+  outline: 2px solid var(--accent);
+}
 
 /* ===== Paneles ===== */
-.panel{
-  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-  padding:14px; box-shadow:0 6px 24px #0004;
-  overflow:hidden;
+.panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: 0 6px 24px #0004;
+  overflow: hidden;
 }
-.paneldashboard{
-  background:transparent; border:0px solid var(--line); border-radius:var(--radius);
-  padding:0px; box-shadow:0;
-  overflow:hidden;
+
+.paneldashboard {
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0;
+  box-shadow: 0;
+  overflow: hidden;
 }
+
 /* ===== Filas / Inputs ===== */
-.row{
-  display:flex; justify-content:space-between; align-items:center; gap:10px; margin:8px 0;
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
 }
-.row input{
-  width:180px; padding:10px; border-radius:10px; border:1px solid var(--line);
-  background:#0e121a; color:#eaeef5; font-size:16px; line-height:1.2; outline:none;
+
+.row input {
+  width: 180px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #0e121a;
+  color: #eaeef5;
+  font-size: 16px;
+  line-height: 1.2;
+  outline: none;
 }
 
 /* ===== Lista de cuentas ===== */
-.card{ border:1px dashed var(--line); border-radius:12px; padding:10px; margin-top:6px }
-.item{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0 }
-.item label{ flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis }
-.item input{
-  flex:0 0 150px; text-align:right; font-size:16px; line-height:1.2;
-  background:#0e121a; color:#eaeef5; border:1px solid var(--line); border-radius:10px; padding:10px;
+.card {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 6px;
 }
 
-.total strong{ font-size:18px }
-.var strong{ color:var(--muted) }
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.item label {
+  flex: 1;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item input {
+  flex: 0 0 150px;
+  text-align: right;
+  font-size: 16px;
+  line-height: 1.2;
+  background: #0e121a;
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.total strong {
+  font-size: 18px;
+}
+
+.var strong {
+  color: var(--muted);
+}
 
 /* ===== Actions (incluye file input) ===== */
-.actions{
-  display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center;
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
 }
-.actions button{
-  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
-  padding:10px 12px; border-radius:10px; font-size:16px; white-space:nowrap;margin-bottom: 10px;
+
+.actions button {
+  background: #0e121a;
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 16px;
+  white-space: nowrap;
+  margin-bottom: 10px;
 }
 
 /* ===== FILE INPUT ===== */
-#file-csv{
-  display:inline-block; max-width:100%; width:auto;
-  color:var(--muted); background:#0e121a; border:1px solid var(--line);
-  border-radius:10px; padding:8px 10px; font-size:16px; line-height:1.2;
-  overflow:hidden; text-overflow:ellipsis;
+#file-csv {
+  display: inline-block;
+  max-width: 100%;
+  width: auto;
+  color: var(--muted);
+  background: #0e121a;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 16px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 #file-csv::file-selector-button,
-#file-csv::-webkit-file-upload-button{
-  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
-  border-radius:8px; padding:8px 10px; margin-right:8px; font-size:16px; cursor:pointer;
+#file-csv::-webkit-file-upload-button {
+  background: #0e121a;
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-right: 8px;
+  font-size: 16px;
+  cursor: pointer;
 }
-.actions #file-csv{ flex:1 1 220px; min-width:180px; }
+
+.actions #file-csv {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
 
 /* ===== Tabla (scroll-x interno + sticky primera columna) ===== */
-.table{
-  width:100%; overflow-x:auto;
-  border:1px solid var(--line); border-radius:12px;
-  -webkit-overflow-scrolling:touch;
+.table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
 }
-.table table{
-  border-collapse:separate; border-spacing:0;
-  width:max-content;           /* que crezca a lo ancho según columnas */
-  min-width:100%;              /* nunca menos que el panel */
-  table-layout:auto;
+
+.table table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content; /* crece según columnas */
+  min-width: 100%;    /* nunca menos que el panel */
+  table-layout: auto;
 }
-th,td{
-  border-bottom:1px solid var(--line);
-  padding:10px; text-align:right; white-space:nowrap; background:var(--card);
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: right;
+  white-space: nowrap;
+  background: var(--card);
 }
+
 /* primera columna (Fecha) fija */
-th:first-child, td:first-child{
-  position:sticky; left:0; z-index:2;
-  text-align:left; box-shadow: 1px 0 0 var(--line);
+th:first-child,
+td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left;
+  box-shadow: 1px 0 0 var(--line);
 }
+
 /* botón ocultar/mostrar en cabecera */
-th .col-toggle{
-  margin-left:6px; width:22px; height:22px;
-  display:inline-flex; align-items:center; justify-content:center;
-  border:1px solid var(--line); border-radius:6px;
-  background:#0e121a; color:var(--muted);
-  font-size:14px; line-height:1; cursor:pointer; user-select:none;
+th .col-toggle {
+  margin-left: 6px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #0e121a;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
 }
 
-/* ===== Modal (z-index alto para que tape sticky) ===== */
-.modal{ position:fixed; inset:0; display:none; z-index: 9999; }
-.modal[aria-hidden="false"]{ display:block; }
-.modal__backdrop{ position:absolute; inset:0; background:#0008; backdrop-filter:blur(2px); }
-.modal__dialog{
-  position:relative; max-width:420px; margin:6vh auto; background:var(--card);
-  border:1px solid var(--line); border-radius:14px; overflow:hidden; z-index: 10000;
-}
-.modal__header{ padding:12px 14px; border-bottom:1px solid var(--line) }
-.modal__body{ padding:12px 14px }
-.modal__footer{ padding:12px 14px; border-top:1px solid var(--line) }
-
-/* ===== Responsive ===== */
-@media (max-width:480px){
-  th:first-child, td:first-child{ position:sticky; } /* mantenemos sticky en móvil */
-  .row input{ width:140px }
-  .item input{ flex:0 0 120px }
+/* ===== MODALES (BASE) ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 9999;
 }
 
-/* Accesibilidad foco */
-button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.modal[aria-hidden="false"] {
+  display: block;
+}
 
-/* Anti-zoom iOS */
-@supports (-webkit-touch-callout:none){ input, select, textarea{ font-size:16px !important; } }
-/* Tarjetas del dashboard: grid + glass tint */
-.cards{ display:grid; grid-template-columns:1fr; gap:10px; }
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: #0008;
+  backdrop-filter: blur(2px);
+}
 
-.card-mini{
-  position:relative;
-  border:0px solid var(--line);
-  border-radius:12px;             /* borde ligeramente redondeado */
-  padding:12px 12px 10px 12px;
-  background: rgba(16, 21, 32, .55);
-  backdrop-filter: blur(9px);     /* efecto glass */
+/* Cuadro del modal (dimensiones generales) */
+.modal__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 370px;   /* ancho máximo del modal */
+  margin: 8vh auto;   /* separación vertical */
+  margin-left: 10px;
+    margin-left: 10px;
+  margin-right: 0px;
+
+  max-height: 84vh;   /* alto máximo del modal */
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modal__body {
+  padding: 12px 14px;
+  overflow: auto;
+}
+
+.modal__footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+}
+
+/* Modal detalle cuenta (dimensiones específicas) */
+.modal-cuenta-dialog {
+  max-width: 370px;
+  max-height: 84vh;
+  backdrop-filter: blur(9px);
+}
+
+/* modal detalle cuenta glass rojo/verde */
+.modal-cuenta-dialog.pos {
+  background: rgba(24, 190, 65, 0.444);
+  box-shadow: 0 18px 50px rgba(0, 128, 0, 0.35);
+}
+
+.modal-cuenta-dialog.neg {
+  background: rgba(188, 18, 18, 0.427);
+  box-shadow: 0 18px 50px rgba(255, 0, 0, 0.35);
+}
+
+/* ===== Tarjetas del dashboard: grid + glass tint ===== */
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.card-mini {
+  position: relative;
+  border: 0 solid var(--line);
+  border-radius: 12px;
+  padding: 12px 12px 10px 12px;
+  background: rgba(16, 21, 32, 0.55);
+  backdrop-filter: blur(9px);
 }
 
 /* tintado por estado */
-.card-mini.pos{
-  background: rgba(20, 60, 30, .45);
-  box-shadow: 0 6px 24px rgba(0, 128, 0, .12) inset;
-}
-.card-mini.neg{
-  background: rgba(60, 20, 20, .45);
-  box-shadow: 0 6px 24px rgba(255, 0, 0, .12) inset;
+.card-mini.pos {
+  background: rgba(20, 60, 30, 0.45);
+  box-shadow: 0 6px 24px rgba(0, 128, 0, 0.12) inset;
 }
 
-.card-mini h4{
-  margin:0; font-size:16px; color:#d0d6e1;
-  padding-right:54px; /* deja hueco a la insignia */
+.card-mini.neg {
+  background: rgba(60, 20, 20, 0.45);
+  box-shadow: 0 6px 24px rgba(255, 0, 0, 0.12) inset;
 }
 
-/* insignia arriba-derecha (8px) con % y € */
-.delta-badge{
-  position:absolute; top:8px; right:8px;
-  display:flex; flex-direction:column; align-items:flex-start; gap:1px;
-  font-size:12px; line-height:1;
-
-  padding:8px 8px; border-radius:8px;
-  background: rgba(0,0,0,.2);
-  border:1px solid var(--line);
-  width: 70px; height:55px;
+.card-mini h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #d0d6e1;
+  padding-right: 54px; /* deja hueco a la insignia */
 }
-.delta-badge .pct{ font-weight:700; }
-.delta-badge.ok{ color:#35c759; }
-.delta-badge.bad{ color:#ff453a; }
 
-.card-mini .now{ margin-top:8px; font-weight:600; font-size:16px; }
-
-/* selector peque */
-#periodo{
-  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
-  border-radius:10px; padding:10px 10px; font-size:16px;margin-bottom: 10px;
+/* insignia arriba-derecha con % y € */
+.delta-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  font-size: 12px;
+  line-height: 1;
+  padding: 8px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line);
+  width: 70px;
+  height: 55px;
 }
+
+.delta-badge .pct {
+  font-weight: 700;
+}
+
+.delta-badge.ok {
+  color: #35c759;
+}
+
+.delta-badge.bad {
+  color: #ff453a;
+}
+
+.card-mini .now {
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* selector periodo */
+#periodo {
+  background: #0e121a;
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 10px;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
 /* resumen variación total (al lado de Historial) */
-.var-total{
-  margin-left:6px;
+.var-total {
+  margin-left: 6px;
   margin-bottom: 6px;
-  padding:6px 10px;
-  border-radius:999px;
-  font-size:12px;
-  background: rgba(0,0,0,.25);
-  border:1px solid var(--line);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line);
   backdrop-filter: blur(9px);
 }
-.var-total.pos{
-  background: rgba(20, 60, 30, .45);
-  color:#b9f5c4;
+
+.var-total.pos {
+  background: rgba(20, 60, 30, 0.45);
+  color: #b9f5c4;
 }
-.var-total.neg{
-  background: rgba(60, 20, 20, .45);
-  color:#ffd0d0;
+
+.var-total.neg {
+  background: rgba(60, 20, 20, 0.45);
+  color: #ffd0d0;
 }
 
 /* tono global según variación total */
-body.trend-pos{
-  background: radial-gradient(circle at top, rgba(24, 145, 54, 0.25), transparent 80%) #0d0f12;
-}
-body.trend-neg{
-  background: radial-gradient(circle at top, rgba(186, 21, 21, 0.254), transparent 80%) #0d0f12;
-}
-.modal__dialog {
-  padding: 0px;
-
-}
-/* modal detalle cuenta glass rojo/verde */
-.modal-cuenta-dialog.pos{
-  background: rgba(24, 190, 65, 0.444);
-  box-shadow: 0 18px 50px rgba(0,128,0,.35);
-}
-.modal-cuenta-dialog.neg{
-  background: rgba(188, 18, 18, 0.427);
-  box-shadow: 0 18px 50px rgba(255,0,0,.35);
-  border-bottom:px solid var(--line);
-}
-
-.table-wrapper{
-  max-height:220px;
-  overflow:auto;
-  border-radius: 10px;
-}
-
-.table-cuenta{
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-  border-radius: 10px;
-}
-.table-cuenta th,
-.table-cuenta td{
-  border-bottom:px solid var(--line);
-  padding:6px 4px;
-  text-align:right;
-}
-.table-cuenta th:first-child,
-.table-cuenta td:first-child{
-  text-align:left;
-}
-.table-cuenta td.pos{ color:#35c759; }
-.table-cuenta td.neg{ color:#ff453a; }
-body.trend-pos{
-  background: radial-gradient(circle at top, rgba(40,120,60,.28), transparent 65%) #0d0f12;
+body.trend-pos {
+  background: radial-gradient(circle at top, rgba(40, 120, 60, 0.28), transparent 65%) #0d0f12;
   background-attachment: fixed;
 }
 
-body.trend-neg{
-  background: radial-gradient(circle at top, rgba(140,40,40,.28), transparent 65%) #0d0f12;
+body.trend-neg {
+  background: radial-gradient(circle at top, rgba(140, 40, 40, 0.28), transparent 65%) #0d0f12;
   background-attachment: fixed;
 }
 
-body.trend-neutral{
+body.trend-neutral {
   background: #0d0f12;
 }
-.cuenta-tooltip{
+
+/* ===== Tabla detalle cuenta ===== */
+.table-wrapper {
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 10px;
+}
+
+.table-cuenta {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.table-cuenta th,
+.table-cuenta td {
+  border-bottom: 1px solid var(--line);
+  padding: 6px 4px;
+  text-align: right;
+}
+
+.table-cuenta th:first-child,
+.table-cuenta td:first-child {
+  text-align: left;
+}
+
+.table-cuenta td.pos {
+  color: #35c759;
+}
+
+.table-cuenta td.neg {
+  color: #ff453a;
+}
+
+/* tooltip bajo la gráfica */
+.cuenta-tooltip {
   margin-top: 8px;
   font-size: 12px;
   opacity: 0.85;
   text-align: center;
 }
+
 /* Saldo total actual encima del dashboard */
-.total-header{
-  display:flex;
+.total-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.total-header > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.total-actual {
+  font-size: 48px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 16px;
+  border: 0 solid var(--line);
+  align-self: flex-end;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 480px) {
+  th:first-child,
+  td:first-child {
+    position: sticky;
+  }
+  .row input {
+    width: 140px;
+  }
+  .item input {
+    flex: 0 0 120px;
+  }
+}
+
+/* Accesibilidad foco */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Anti-zoom iOS */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+/* ---- Acciones en tabla detalle cuenta (3 puntitos flotante) ---- */
+.table-cuenta td.actions-cell{
+  position:relative;
+  text-align:right;
+  padding-right:0;
+}
+
+.dots-btn{
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:#0e121a;
+  color:#eaeef5;
+  font-size:16px;
+  line-height:1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+/* menú flotante GLOBAL (no empuja la tabla) */
+.row-menu{
+  position:fixed;              /* ⬅️ flotante respecto a la ventana */
+  min-width:120px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);
+  padding:4px 0;
+  z-index:99999;
+
+  display:none;
   flex-direction:column;
-  gap:4px;
-  margin-bottom:10px;
 }
 
-.total-header > span{
+.row-menu.open{
+  display:flex;
+}
+
+.row-menu button{
+  width:100%;
+  border:0;
+  background:transparent;
+  color:#eaeef5;
+  text-align:left;
+  padding:6px 10px;
   font-size:13px;
-  color:var(--muted);
+  cursor:pointer;
 }
 
-.total-actual{
-  font-size:48px;
-  font-weight:600;
-  letter-spacing:0.03em;
-  border-radius:16px;
-  border:px solid var(--line);
-  align-self:flex-end;
+.row-menu button:hover{
+  background:rgba(255,255,255,0.05);
 }
