@@ -4,64 +4,93 @@
     if (s == null) return 0;
     if (typeof s === "number") return s;
     s = String(s).replace(/\s/g,"").replace("€","").replace(/\./g,"").replace(",",".");
+
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : 0;
   }
-  function numberToEs(n, opts){ return new Intl.NumberFormat("es-ES", opts||{style:"currency",currency:"EUR"}).format(n); }
-  function pctToEs(n){ return new Intl.NumberFormat("es-ES",{style:"percent",maximumFractionDigits:2}).format(n); }
-  function ymd(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),da=String(d.getDate()).padStart(2,"0"); return `${y}-${m}-${da}`; }
+
+  function numberToEs(n, opts){
+    return new Intl.NumberFormat("es-ES", opts||{style:"currency",currency:"EUR"}).format(n);
+  }
+
+  function pctToEs(n){
+    return new Intl.NumberFormat("es-ES",{style:"percent",maximumFractionDigits:2}).format(n);
+  }
+
+  function ymd(d){
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),da=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${da}`;
+  }
 
   // ------- Estado -------
-  const KEY_DATA="mis_cuentas_fase1_data", KEY_CUENTAS="mis_cuentas_fase1_cuentas", KEY_UID="mis_cuentas_uid", KEY_HIDDEN="mis_cuentas_hidden_cols_by_name";
-  const DEFAULT_CUENTAS=["Principal","Myinvestor","Revolut Main","Revolut remunerada","Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"];
-  function getOrCreateUid(){ let id=localStorage.getItem(KEY_UID); if(!id){ id="u_"+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem(KEY_UID,id);} return id; }
+  const KEY_DATA   = "mis_cuentas_fase1_data";
+  const KEY_CUENTAS= "mis_cuentas_fase1_cuentas";
+  const KEY_UID    = "mis_cuentas_uid";
+  const KEY_HIDDEN = "mis_cuentas_hidden_cols_by_name";
 
-  const state={
-    uid:getOrCreateUid(),
-    cuentas: JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
+  const DEFAULT_CUENTAS = [
+    "Principal","Myinvestor","Revolut Main","Revolut remunerada",
+    "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
+  ];
+
+  function getOrCreateUid(){
+    let id = localStorage.getItem(KEY_UID);
+    if(!id){
+      id = "u_"+Math.random().toString(36).slice(2)+Date.now().toString(36);
+      localStorage.setItem(KEY_UID,id);
+    }
+    return id;
+  }
+
+  const state = {
+    uid      : getOrCreateUid(),
+    cuentas  : JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
     registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
-    editingIndex:-1
+    editingIndex: -1,
+    cuentaSeleccionada: null
   };
+
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
   function saveHidden(){ localStorage.setItem(KEY_HIDDEN, JSON.stringify([...hiddenCols])); }
 
-   // ------- DOM -------
   // ------- DOM -------
-  const $fecha = document.getElementById("fecha");
-  const $wrapper = document.getElementById("cuentas-wrapper");
-  const $total = document.getElementById("total");
-  const $var = document.getElementById("variacion");
-  const $varpct = document.getElementById("varpct");
-  const $tabla = document.getElementById("tabla-historial");
-  const $restore = document.getElementById("col-restore");
-  const $status = document.getElementById("status");
-  const $dashboard = document.getElementById("dashboard");
-  const $totalActual = document.getElementById("total-actual");
+  const $fecha        = document.getElementById("fecha");
+  const $wrapper      = document.getElementById("cuentas-wrapper");
+  const $total        = document.getElementById("total");
+  const $var          = document.getElementById("variacion");
+  const $varpct       = document.getElementById("varpct");
+  const $tabla        = document.getElementById("tabla-historial");
+  const $restore      = document.getElementById("col-restore");
+  const $status       = document.getElementById("status");
+  const $dashboard    = document.getElementById("dashboard");
+  const $totalActual  = document.getElementById("total-actual");
 
   // modales
-  const $modal = document.getElementById("modal");
-  const $btnAbrirModal = document.getElementById("btn-abrir-modal");
-  const $btnCerrarModal = document.getElementById("btn-cerrar-modal");
-  const $modalBackdrop = document.getElementById("modal-close");
+  const $modal              = document.getElementById("modal");
+  const $btnAbrirModal      = document.getElementById("btn-abrir-modal");
+  const $btnCerrarModal     = document.getElementById("btn-cerrar-modal");
+  const $modalBackdrop      = document.getElementById("modal-close");
 
-  const $modalHistorial = document.getElementById("modal-historial");
-  const $btnHistorial = document.getElementById("btn-historial");
-  const $btnCerrarModalHistorial = document.getElementById("btn-cerrar-modal-historial");
-  const $modalHistorialBackdrop = document.getElementById("modal-historial-close");
+  const $modalHistorial           = document.getElementById("modal-historial");
+  const $btnHistorial             = document.getElementById("btn-historial");
+  const $btnCerrarModalHistorial  = document.getElementById("btn-cerrar-modal-historial");
+  const $modalHistorialBackdrop   = document.getElementById("modal-historial-close");
 
-  const $modalCuenta = document.getElementById("modal-cuenta");
-  const $modalCuentaDialog = document.querySelector("#modal-cuenta .modal__dialog");
-  const $modalCuentaTitle = document.getElementById("modal-cuenta-title");
-  const $modalCuentaBackdrop = document.getElementById("modal-cuenta-close");
-  const $btnCerrarModalCuenta = document.getElementById("btn-cerrar-modal-cuenta");
-  const $cuentaChart = document.getElementById("cuenta-chart");
-  const $cuentaHistBody = document.getElementById("cuenta-historial-body");
-  const $cuentaTooltip = document.getElementById("cuenta-tooltip");
+  const $modalCuenta        = document.getElementById("modal-cuenta");
+  const $modalCuentaDialog  = document.querySelector("#modal-cuenta .modal__dialog");
+  const $modalCuentaTitle   = document.getElementById("modal-cuenta-title");
+  const $modalCuentaBackdrop= document.getElementById("modal-cuenta-close");
+  const $btnCerrarModalCuenta= document.getElementById("btn-cerrar-modal-cuenta");
+  const $cuentaChart        = document.getElementById("cuenta-chart");
+  const $cuentaHistBody     = document.getElementById("cuenta-historial-body");
+  const $cuentaTooltip      = document.getElementById("cuenta-tooltip");
 
-  const $varTotal = document.getElementById("var-total");
-  const $body = document.body;
+  const $varTotal      = document.getElementById("var-total");
+  const $comparar      = document.getElementById("comparar");
+  const $varComparada  = document.getElementById("var-comparada");
+  const $body          = document.body;
 
-  function setStatus(txt){ $status.textContent = txt || ""; }
+  function setStatus(txt){ if ($status) $status.textContent = txt || ""; }
 
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
   document.getElementById("btn-limpiar").addEventListener("click", () => {
@@ -79,16 +108,18 @@
   document.getElementById("btn-reset").addEventListener("click", borrarTodo);
   document.getElementById("btn-add-cuenta").addEventListener("click", addCuenta);
 
-  $btnAbrirModal.addEventListener("click", openModal);
-  $btnCerrarModal.addEventListener("click", closeModal);
-  $modalBackdrop.addEventListener("click", closeModal);
+  if ($btnAbrirModal) $btnAbrirModal.addEventListener("click", openModal);
+  if ($btnCerrarModal) $btnCerrarModal.addEventListener("click", closeModal);
+  if ($modalBackdrop)  $modalBackdrop.addEventListener("click", closeModal);
 
-  if ($btnHistorial) $btnHistorial.addEventListener("click", openHistorialModal);
+  if ($btnHistorial)            $btnHistorial.addEventListener("click", openHistorialModal);
   if ($btnCerrarModalHistorial) $btnCerrarModalHistorial.addEventListener("click", closeHistorialModal);
-  if ($modalHistorialBackdrop) $modalHistorialBackdrop.addEventListener("click", closeHistorialModal);
+  if ($modalHistorialBackdrop)  $modalHistorialBackdrop.addEventListener("click", closeHistorialModal);
 
   if ($btnCerrarModalCuenta) $btnCerrarModalCuenta.addEventListener("click", closeCuentaModal);
-  if ($modalCuentaBackdrop) $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
+  if ($modalCuentaBackdrop)  $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
+
+  if ($comparar) $comparar.addEventListener("change", updateComparativa);
 
   function openModal(){
     if ($modal) $modal.setAttribute("aria-hidden","false");
@@ -104,7 +135,7 @@
     if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden","false");
   }
 
-function closeHistorialModal(){
+  function closeHistorialModal(){
     if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden", "true");
   }
 
@@ -122,31 +153,52 @@ function closeHistorialModal(){
     document.querySelectorAll(".row-menu.open").forEach(m => m.classList.remove("open"));
   }
 
-
   function renderInputs(valores){
-    $wrapper.innerHTML="";
-    state.cuentas.forEach(c=>{
-      const row=document.createElement("div"); row.className="item";
-      const label=document.createElement("label"); label.textContent=c;
-      const input=document.createElement("input");
-      input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €"; input.autocomplete="off"; input.style.fontSize="16px";
-      input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
-      input.addEventListener("blur", ()=>{ input.value = numberToEs(esToNumber(input.value)); });
-      row.append(label,input);
+    $wrapper.innerHTML = "";
+    state.cuentas.forEach(c => {
+      const row = document.createElement("div");
+      row.className = "item";
+
+      const label = document.createElement("label");
+      label.textContent = c;
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.inputMode = "decimal";
+      input.placeholder = "0,00 €";
+      input.autocomplete = "off";
+      input.style.fontSize = "16px";
+
+      input.value = valores && (valores[c] !== undefined) ? valores[c] : "";
+
+      input.addEventListener("focus", () => {
+        if (input.value) input.select();
+      });
+
+      input.addEventListener("blur", () => {
+        const raw = input.value.trim();
+        if (raw === "") {
+          input.value = "";
+          return;
+        }
+        input.value = numberToEs(esToNumber(raw));
+      });
+
+      row.append(label, input);
       $wrapper.append(row);
     });
   }
 
-
   function setInputsFromSaldos(s){
-    $wrapper.querySelectorAll(".item").forEach(row=>{
-      const name=row.querySelector("label").textContent;
-      const inp=row.querySelector("input");
-      const val=s[name]||0;
-      inp.value=numberToEs(val);
+    $wrapper.querySelectorAll(".item").forEach(row => {
+      const name = row.querySelector("label").textContent;
+      const inp  = row.querySelector("input");
+      const val  = s[name] || 0;
+      inp.value = numberToEs(val);
     });
     calcularTotal();
   }
+
   function leerInputs(){
     const saldos = {};
 
@@ -158,7 +210,7 @@ function closeHistorialModal(){
       baseSaldos = state.registros[state.registros.length - 1].saldos || {};
     }
 
-    [].slice.call($wrapper.querySelectorAll(".item")).forEach(row=>{
+    [].slice.call($wrapper.querySelectorAll(".item")).forEach(row => {
       const name  = row.querySelector("label").textContent;
       const input = row.querySelector("input");
       const raw   = input.value.trim();
@@ -174,49 +226,53 @@ function closeHistorialModal(){
     return saldos;
   }
 
-
   // ------- Cálculo -------
   function calcularTotal(){
-    const saldos=leerInputs();
-    const total=Object.values(saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
-    const prev=state.registros.length? state.registros[state.registros.length-1].total : 0;
-    const variacion=total-prev;
-    const varpct= prev!==0 ? (variacion/prev) : 0;
-    $total.textContent=numberToEs(total);
-    $var.textContent=numberToEs(variacion);
-    $varpct.textContent=pctToEs(varpct);
+    const saldos = leerInputs();
+    const total  = Object.values(saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
+    const prev   = state.registros.length ? state.registros[state.registros.length-1].total : 0;
+    const variacion = total - prev;
+    const varpct    = prev !== 0 ? (variacion/prev) : 0;
+
+    $total.textContent  = numberToEs(total);
+    $var.textContent    = numberToEs(variacion);
+    $varpct.textContent = pctToEs(varpct);
+
     return {total,variacion,varpct};
   }
+
   function recalcVariaciones(){
     state.registros.sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
     for(let i=0;i<state.registros.length;i++){
-      const prev=i>0?state.registros[i-1].total:0;
-      const t=state.registros[i].total;
-      state.registros[i].variacion=t-prev;
-      state.registros[i].varpct= prev!==0 ? (t-prev)/prev : 0;
+      const prev = i>0 ? state.registros[i-1].total : 0;
+      const t    = state.registros[i].total;
+      state.registros[i].variacion = t - prev;
+      state.registros[i].varpct    = prev !== 0 ? (t - prev)/prev : 0;
     }
   }
+
   function setGuardarLabel(){
-    const $btnGuardar=document.getElementById("btn-guardar");
+    const $btnGuardar = document.getElementById("btn-guardar");
     $btnGuardar.textContent = state.editingIndex>=0 ? "Actualizar" : "Guardar";
   }
 
   // ------- Guardar -------
   async function onGuardar(){
-    const fecha=$fecha.value;
-    if(!fecha) return alert("Pon una fecha.");
-    const {total,variacion,varpct}=calcularTotal();
-    const saldos=leerInputs();
+    const fecha = $fecha.value;
+    if (!fecha) return alert("Pon una fecha.");
+    const {total,variacion,varpct} = calcularTotal();
+    const saldos = leerInputs();
 
-    if(state.editingIndex>=0){
-      state.registros[state.editingIndex]={fecha,saldos,total,variacion,varpct};
+    if (state.editingIndex>=0){
+      state.registros[state.editingIndex] = {fecha,saldos,total,variacion,varpct};
       recalcVariaciones();
-      state.editingIndex=-1;
+      state.editingIndex = -1;
       setGuardarLabel();
-    }else{
+    } else {
       state.registros.push({fecha,saldos,total,variacion,varpct});
       recalcVariaciones();
     }
+
     persistLocal();
     renderTabla();
     renderDashboard();
@@ -225,44 +281,49 @@ function closeHistorialModal(){
     try{
       setStatus("Guardando…");
       await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+        cuentas: state.cuentas,
+        registros: state.registros,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
       setStatus("✔ Guardado"); setTimeout(()=>setStatus(""),1200);
-    }catch(e){ console.error(e); setStatus("✖ Error guardando"); }
+    }catch(e){
+      console.error(e);
+      setStatus("✖ Error guardando");
+    }
   }
 
   // ------- Tabla + ocultar columnas (header también) -------
-  let currentColsCache=[];
+  let currentColsCache = [];
+
   function renderRestoreBar(cols){
     $restore.innerHTML="";
     hiddenCols.forEach(name=>{
-      if(name==="Fecha") return; // no restaurar aquí la fecha
+      if(name==="Fecha") return;
       const chip=document.createElement("button");
       chip.className="col-chip";
       chip.textContent=`+ ${name}`;
       chip.addEventListener("click", ()=>{
         hiddenCols.delete(name); saveHidden();
-        const table=$tabla.querySelector("table");
+        const table = $tabla.querySelector("table");
         setColVisibilityByName(table, cols, name, true);
         renderRestoreBar(cols);
       });
       $restore.append(chip);
     });
   }
-function setColVisibilityByName(tableEl, cols, name, visible){
-  const idx = cols.indexOf(name);
-  if (idx < 0) return;
 
-  // Cabecera
-  const th = tableEl.querySelector("thead tr").children[idx];
-  if (th) th.style.display = visible ? "" : "none";
+  function setColVisibilityByName(tableEl, cols, name, visible){
+    const idx = cols.indexOf(name);
+    if (idx < 0) return;
 
-  // Cuerpo
-  tableEl.querySelectorAll("tbody tr").forEach(tr=>{
-    const cell = tr.children[idx];
-    if (cell) cell.style.display = visible ? "" : "none";
-  });
-}
+    const th = tableEl.querySelector("thead tr").children[idx];
+    if (th) th.style.display = visible ? "" : "none";
+
+    tableEl.querySelectorAll("tbody tr").forEach(tr=>{
+      const cell = tr.children[idx];
+      if (cell) cell.style.display = visible ? "" : "none";
+    });
+  }
 
   function makeToggleBtn(colName, isHidden){
     const btn=document.createElement("button");
@@ -282,19 +343,20 @@ function setColVisibilityByName(tableEl, cols, name, visible){
   }
 
   function renderTabla(){
-    const cuentas=state.cuentas;
-    const cols=["Fecha",...cuentas,"TOTAL","Variación","%Var"];
-    currentColsCache=cols.slice();
+    const cuentas = state.cuentas;
+    const cols    = ["Fecha",...cuentas,"TOTAL","Variación","%Var"];
+    currentColsCache = cols.slice();
 
-    const table=document.createElement("table");
-    const thead=document.createElement("thead");
-    const trh=document.createElement("tr");
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const trh   = document.createElement("tr");
 
     cols.forEach((c,idx)=>{
       const th=document.createElement("th");
       th.className="col-header";
       if(idx===0) th.classList.add("sticky-col");
-      const title=document.createElement("span"); title.className="col-title"; title.textContent=c; th.append(title);
+      const title=document.createElement("span");
+      title.className="col-title"; title.textContent=c; th.append(title);
       if(idx>0){ th.append(makeToggleBtn(c, hiddenCols.has(c))); }
       trh.append(th);
     });
@@ -304,54 +366,79 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     const tbody=document.createElement("tbody");
     state.registros.forEach((r,i)=>{
       const tr=document.createElement("tr");
-      const tdF=document.createElement("td"); tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
-      cuentas.forEach(c=>{ const td=document.createElement("td"); td.textContent=numberToEs(r.saldos[c]||0); tr.append(td); });
+
+      const tdF=document.createElement("td");
+      tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
+
+      cuentas.forEach(c=>{
+        const td=document.createElement("td");
+        td.textContent=numberToEs(r.saldos[c]||0);
+        tr.append(td);
+      });
+
       const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
       const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
       const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
+
       const tdA=document.createElement("td"); tdA.className="actions-cell";
-      const btnE=document.createElement("button"); btnE.type="button"; btnE.className="row-btn"; btnE.textContent="✎"; btnE.title="Editar";
+      const btnE=document.createElement("button");
+      btnE.type="button"; btnE.className="row-btn"; btnE.textContent="✎"; btnE.title="Editar";
       btnE.addEventListener("click",()=>{
         state.editingIndex=i; setGuardarLabel();
         $fecha.value=r.fecha; renderInputs({}); setInputsFromSaldos(r.saldos); openModal();
       });
-      const btnD=document.createElement("button"); btnD.type="button"; btnD.className="row-btn"; btnD.textContent="🗑"; btnD.title="Borrar";
+
+      const btnD=document.createElement("button");
+      btnD.type="button"; btnD.className="row-btn"; btnD.textContent="🗑"; btnD.title="Borrar";
       btnD.addEventListener("click",()=>{
         if(!confirm(`Borrar el registro de ${r.fecha}?`)) return;
-        state.registros.splice(i,1); recalcVariaciones(); persistLocal(); renderTabla(); renderDashboard();
+        state.registros.splice(i,1);
+        recalcVariaciones(); persistLocal(); renderTabla(); renderDashboard();
         firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
           cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
         }).catch(console.error);
       });
+
       tdA.append(btnE,btnD); tr.append(tdA);
       tbody.append(tr);
     });
 
     table.append(thead,tbody);
     $tabla.innerHTML=""; $tabla.append(table);
-    table.style.minWidth=(cols.length*140+120)+"px";
+    table.style.minWidth = (cols.length*140+120)+"px";
 
-    // aplica ocultas y barra de restauración
     hiddenCols.forEach(name=> setColVisibilityByName(table, cols, name, false));
     renderRestoreBar(cols);
   }
 
   // ------- Dashboard -------
 
-  // Helpers de periodo
   function startOfWeek(d){ // ISO: lunes
-    const dt=new Date(d); const day=(dt.getDay()+6)%7; dt.setDate(dt.getDate()-day); dt.setHours(0,0,0,0); return dt;
+    const dt=new Date(d);
+    const day=(dt.getDay()+6)%7;
+    dt.setDate(dt.getDate()-day);
+    dt.setHours(0,0,0,0);
+    return dt;
   }
-  function startOfMonth(d){ const dt=new Date(d.getFullYear(), d.getMonth(), 1); dt.setHours(0,0,0,0); return dt; }
-  function startOfYear(d){ const dt=new Date(d.getFullYear(), 0, 1); dt.setHours(0,0,0,0); return dt; }
+
+  function startOfMonth(d){
+    const dt=new Date(d.getFullYear(), d.getMonth(), 1);
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
+
+  function startOfYear(d){
+    const dt=new Date(d.getFullYear(), 0, 1);
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
 
   function getPeriodoStart(periodo, refDate){
     if(periodo==="semana") return startOfWeek(refDate);
     if(periodo==="anio")   return startOfYear(refDate);
-    return startOfMonth(refDate); // mes por defecto
+    return startOfMonth(refDate);
   }
 
-  // primer registro >= inicioPeriodo (fallback: primer registro existente)
   function firstRecordFrom(dateStart){
     const records = [...state.registros];
     for(const r of records){
@@ -360,27 +447,47 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     return records[0] || null;
   }
 
+  function getSortedRegistros(){
+    return [...state.registros].sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
+  }
+
   // Calcula variación por cuenta contra el primer registro del periodo
+  // PER CUENTA: usa el registro más antiguo del periodo donde esa cuenta tiene dato
   function computeDeltaByAccount(periodo){
     if(!state.registros.length) return {};
-    const last = state.registros[state.registros.length-1];
+
+    const regs = getSortedRegistros();
+    const last = regs[regs.length-1];
     const start = getPeriodoStart(periodo, new Date(last.fecha));
-    const base = firstRecordFrom(start) || last;
 
     const deltas = {};
     state.cuentas.forEach(cta=>{
-      const nowVal  = (last.saldos[cta]||0);
-      const baseVal = (base.saldos[cta]||0);
+      const nowVal = (last.saldos && Number.isFinite(last.saldos[cta])) ? last.saldos[cta] : 0;
+
+      let baseRecord = null;
+      for (const r of regs){
+        const d = new Date(r.fecha);
+        if (d >= start && r.saldos && Number.isFinite(r.saldos[cta])){
+          baseRecord = r;
+          break;
+        }
+      }
+
+      if (!baseRecord){
+        deltas[cta] = { nowVal, diff: 0, pct: 0 };
+        return;
+      }
+
+      const baseVal = baseRecord.saldos[cta];
       const diff    = nowVal - baseVal;
-      const pct     = baseVal !== 0 ? (diff/baseVal) : 0;
-      deltas[cta] = { nowVal, diff, pct };
+      const pct     = baseVal !== 0 ? (diff / baseVal) : 0;
+      deltas[cta]   = { nowVal, diff, pct };
     });
+
     return deltas;
   }
 
-  // Render tarjetas
   function renderDashboard(){
-    // total actual = último registro
     if ($totalActual){
       const lastTotal = state.registros.length
         ? state.registros[state.registros.length - 1].total
@@ -391,16 +498,15 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     $dashboard.innerHTML="";
     if(!state.registros.length){
       $dashboard.innerHTML = '<div class="muted">Sin datos. Pulsa “Actualizar”.</div>';
+      updateComparativa();
       return;
     }
 
     const periodoSel = (document.getElementById("periodo")?.value) || "mes";
     const deltas = computeDeltaByAccount(periodoSel);
 
-    // actualizar resumen variación total y fondo
     updateTotalVariation(deltas, periodoSel);
 
-    // Tarjeta por cuenta
     state.cuentas.forEach(cta=>{
       const { nowVal, diff, pct } = deltas[cta] || { nowVal:0, diff:0, pct:0 };
       const card = document.createElement("div");
@@ -412,13 +518,19 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
       const badge = document.createElement("div");
       badge.className = "delta-badge " + (diff>=0 ? "ok" : "bad");
+
       const scope = document.createElement("div");
-      scope.textContent = (periodoSel==="semana"?"Semana": periodoSel==="anio"?"Año":"Mes");
+      scope.textContent =
+        (periodoSel==="semana" ? "Semana" :
+         periodoSel==="anio"   ? "Año"    : "Mes");
+
       const pctEl = document.createElement("div");
       pctEl.className="pct";
       pctEl.textContent = pctToEs(pct);
+
       const eurEl = document.createElement("div");
       eurEl.textContent = numberToEs(diff);
+
       badge.append(scope, pctEl, eurEl);
       card.append(badge);
 
@@ -427,49 +539,138 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       nowEl.textContent = numberToEs(nowVal);
       card.append(nowEl);
 
-      // abrir detalle de esa cuenta al click
       card.addEventListener("click", ()=> openCuentaModal(cta));
 
       $dashboard.append(card);
     });
+
+    updateComparativa();
   }
 
   function updateTotalVariation(deltas, periodoSel){
     if (!$varTotal) return;
 
     let totalDiff = 0;
-    let totalNow = 0;
+    let totalNow  = 0;
 
     state.cuentas.forEach(cta=>{
       const info = deltas[cta];
       if (!info) return;
       totalDiff += info.diff;
-      totalNow += info.nowVal;
+      totalNow  += info.nowVal;
     });
 
     const baseTotal = totalNow - totalDiff;
     const pct = baseTotal !== 0 ? (totalDiff / baseTotal) : 0;
-    const scopeLabel = (periodoSel==="semana"?"Semana": periodoSel==="anio"?"Año":"Mes");
+    const scopeLabel =
+      (periodoSel==="semana" ? "Semana" :
+       periodoSel==="anio"   ? "Año"    : "Mes");
 
     $varTotal.textContent = `${scopeLabel}: ${numberToEs(totalDiff)} (${pctToEs(pct)})`;
 
     let cls = "var-total";
-    if (totalDiff > 0) cls += " pos";
+    if (totalDiff > 0)      cls += " pos";
     else if (totalDiff < 0) cls += " neg";
     $varTotal.className = cls;
 
     if ($body){
       $body.classList.remove("trend-pos","trend-neg","trend-neutral");
-      if (totalDiff > 0) $body.classList.add("trend-pos");
+      if (totalDiff > 0)      $body.classList.add("trend-pos");
       else if (totalDiff < 0) $body.classList.add("trend-neg");
-      else $body.classList.add("trend-neutral");
+      else                    $body.classList.add("trend-neutral");
     }
+  }
+
+  // diff TOTAL en un rango de fechas [start, end)
+  function computeTotalDiffBetween(startInclusive, endExclusive){
+    const regs = getSortedRegistros();
+    let first = null, last = null;
+
+    for (const r of regs){
+      const d = new Date(r.fecha);
+      if (d >= startInclusive && d < endExclusive){
+        if (!first) first = r;
+        last = r;
+      }
+    }
+
+    if (!first || !last){
+      return { hasData:false, diff:0, first:null, last:null };
+    }
+
+    const diff = last.total - first.total;
+    return { hasData:true, diff, first, last };
+  }
+
+  // Comparativa: Mes actual vs mes anterior / Semana actual vs semana anterior
+  function updateComparativa(){
+    if (!$varComparada || !state.registros.length) return;
+
+    const regs = getSortedRegistros();
+    const lastReg = regs[regs.length-1];
+    const lastDate = new Date(lastReg.fecha);
+
+    const scope = ($comparar && $comparar.value) || "mes";
+
+    let labelPrefix, actual, previo;
+
+    if (scope === "semana"){
+      const startCur = startOfWeek(lastDate);
+      const endCur   = new Date(startCur); endCur.setDate(endCur.getDate()+7);
+
+      const startPrev= new Date(startCur); startPrev.setDate(startPrev.getDate()-7);
+      const endPrev  = startCur;
+
+      actual = computeTotalDiffBetween(startCur, endCur);
+      previo = computeTotalDiffBetween(startPrev, endPrev);
+      labelPrefix = "Semana";
+    } else {
+      const y = lastDate.getFullYear();
+      const m = lastDate.getMonth();
+
+      const startCur = new Date(y, m,   1);
+      const endCur   = new Date(y, m+1, 1);
+
+      const startPrev= new Date(y, m-1, 1);
+      const endPrev  = new Date(y, m,   1);
+
+      actual = computeTotalDiffBetween(startCur, endCur);
+      previo = computeTotalDiffBetween(startPrev, endPrev);
+      labelPrefix = "Mes";
+    }
+
+    if (!actual.hasData){
+      $varComparada.textContent = `${labelPrefix}: sin datos suficientes`;
+      $varComparada.className = "var-comparada";
+      return;
+    }
+
+    const diffAct  = actual.diff;
+    const baseAct  = actual.first.total;
+    const pctAct   = baseAct !== 0 ? (diffAct / baseAct) : 0;
+
+    let text = `${labelPrefix} actual: ${numberToEs(diffAct)} (${pctToEs(pctAct)})`;
+
+    if (previo.hasData){
+      const diffPrev = previo.diff;
+      const basePrev = previo.first.total;
+      const pctPrev  = basePrev !== 0 ? (diffPrev / basePrev) : 0;
+      text += ` · Anterior: ${numberToEs(diffPrev)} (${pctToEs(pctPrev)})`;
+    } else {
+      text += " · ";
+    }
+
+    let cls = "var-comparada";
+    if (diffAct > 0)      cls += " pos";
+    else if (diffAct < 0) cls += " neg";
+
+    $varComparada.textContent = text;
+    $varComparada.className   = cls;
   }
 
   function buildCuentaDetalle(nombreCuenta){
     if (!$cuentaHistBody || !$cuentaChart) return;
 
-    // limpiar menús anteriores
     document.querySelectorAll(".row-menu").forEach(el => el.remove());
 
     const regsOrdenados = state.registros
@@ -499,9 +700,9 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     puntos.forEach(p => {
       let diffStr = "—";
-      let pctStr = "—";
-      let diff = 0;
-      let pct = 0;
+      let pctStr  = "—";
+      let diff    = 0;
+      let pct     = 0;
 
       if (prevVal !== null){
         diff = p.valor - prevVal;
@@ -539,7 +740,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
         tdDiffPct.classList.add("pos");
       }
 
-      // ---- Celda acciones con menú flotante ----
       const tdAcc = document.createElement("td");
       tdAcc.className = "actions-cell";
 
@@ -558,13 +758,41 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
       btnEdit.addEventListener("click", () => {
         if (!reg) return;
-        state.editingIndex = p._idx;
-        setGuardarLabel();
-        if ($fecha) $fecha.value = reg.fecha;
-        renderInputs({});
-        if (reg.saldos) setInputsFromSaldos(reg.saldos);
-        closeCuentaModal();
-        openModal();
+        const actual = (reg.saldos && Number.isFinite(reg.saldos[nombreCuenta]))
+          ? reg.saldos[nombreCuenta]
+          : 0;
+
+        const nuevoStr = prompt(
+          `Nuevo valor para "${nombreCuenta}" el ${reg.fecha}:`,
+          numberToEs(actual)
+        );
+        if (nuevoStr == null) return;
+
+        const nuevoNum = esToNumber(nuevoStr);
+        if (!Number.isFinite(nuevoNum)) return;
+
+        if (!reg.saldos) reg.saldos = {};
+        reg.saldos[nombreCuenta] = nuevoNum;
+
+        reg.total = Object.values(reg.saldos).reduce(
+          (a,b)=> a + (Number.isFinite(b)?b:0), 0
+        );
+
+        state.registros[p._idx] = reg;
+        recalcVariaciones();
+        persistLocal();
+        renderTabla();
+        renderDashboard();
+
+        if (window.firebase && state.uid){
+          firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+            cuentas: state.cuentas,
+            registros: state.registros,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          }).catch(console.error);
+        }
+
+        buildCuentaDetalle(nombreCuenta);
       });
 
       const btnDelete = document.createElement("button");
@@ -591,13 +819,11 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
       menu.append(btnEdit, btnDelete);
 
-      // menú se cuelga del body, no de la celda → no empuja tabla
       document.body.append(menu);
 
       dotsBtn.addEventListener("click", (e) => {
         e.stopPropagation();
 
-        // cerrar otros menús abiertos
         document.querySelectorAll(".row-menu.open").forEach(m => {
           if (m !== menu) m.classList.remove("open");
         });
@@ -608,13 +834,12 @@ function setColVisibilityByName(tableEl, cols, name, visible){
           return;
         }
 
-        // calcular posición flotante respecto al botón
         const rect = dotsBtn.getBoundingClientRect();
-        const menuWidth = 140; // aproximado
-        const top = rect.bottom + 6;
+        const menuWidth = 140;
+        const top  = rect.bottom + 6;
         const left = Math.max(8, rect.right - menuWidth);
 
-        menu.style.top = `${top}px`;
+        menu.style.top  = `${top}px`;
         menu.style.left = `${left}px`;
         menu.classList.add("open");
 
@@ -636,16 +861,12 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     if ($modalCuentaDialog){
       $modalCuentaDialog.classList.remove("pos","neg");
-      if (lastDiff > 0) $modalCuentaDialog.classList.add("pos");
+      if (lastDiff > 0)      $modalCuentaDialog.classList.add("pos");
       else if (lastDiff < 0) $modalCuentaDialog.classList.add("neg");
     }
 
     drawCuentaChart($cuentaChart, puntos);
   }
-
-
-
-
 
   function drawCuentaChart(canvas, puntos){
     if (!canvas || !puntos.length) return;
@@ -656,13 +877,12 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     ctx.clearRect(0,0,w,h);
 
-    // Datos crudos
     const xsTime = puntos.map(p => new Date(p.fecha).getTime());
     const ysVal  = puntos.map(p => p.valor);
 
     let minX = Math.min(...xsTime);
     let maxX = Math.max(...xsTime);
-    if (minX === maxX) maxX = minX + 24*60*60*1000; // un día de margen
+    if (minX === maxX) maxX = minX + 24*60*60*1000;
 
     const minY = 0;
     let maxY = Math.max(...ysVal);
@@ -671,7 +891,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     const xScale = t => padding + ((t - minX) / (maxX - minX)) * (w - 2*padding);
     const yScale = v => h - padding - ((v - minY) / (maxY - minY)) * (h - 2*padding);
 
-    // Puntos proyectados al canvas
     const points = puntos.map(p => {
       const t = new Date(p.fecha).getTime();
       return {
@@ -682,7 +901,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       };
     });
 
-    // guardar para la interacción tipo Revolut
     canvas._chartData = {
       points,
       minX,
@@ -695,7 +913,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     };
     canvas._puntos = puntos.slice();
 
-    // ejes
     ctx.save();
     ctx.globalAlpha = 0.35;
     ctx.strokeStyle = "#ffffff";
@@ -707,7 +924,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     ctx.stroke();
     ctx.restore();
 
-    // línea suavizada Catmull–Rom → Bézier (SIEMPRE pasa por los puntos)
     ctx.save();
     ctx.strokeStyle = "#67d5ff";
     ctx.lineWidth = 2;
@@ -734,13 +950,12 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     ctx.stroke();
     ctx.restore();
 
-    // puntos coloreados según subida/bajada
     ctx.save();
     for (let i = 0; i < points.length; i++){
-      let color = "#cccccc"; // primero
+      let color = "#cccccc";
       if (i > 0){
         const diff = points[i].valor - points[i-1].valor;
-        if (diff > 0) color = "#35c759";
+        if (diff > 0)      color = "#35c759";
         else if (diff < 0) color = "#ff453a";
       }
       ctx.fillStyle = color;
@@ -750,16 +965,17 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     }
     ctx.restore();
 
-    // cursor interactivo (línea vertical + punto + tooltip), usando canvas._hoverT
     if (typeof canvas._hoverT === "number"){
       const hoverT = canvas._hoverT;
       const tooltipEl = document.getElementById("cuenta-tooltip");
 
+      const {minX,maxX} = canvas._chartData;
+
       const tClamped = Math.max(minX, Math.min(maxX, hoverT));
 
-      let v = points[0].valor;
+      let v   = points[0].valor;
       let dir = 0;
-      let yVal = points[0].y;
+      let yVal= points[0].y;
 
       if (tClamped <= points[0].t){
         v = points[0].valor;
@@ -777,9 +993,9 @@ function setColVisibilityByName(tableEl, cols, name, visible){
           const b = points[i+1];
           if (tClamped >= a.t && tClamped <= b.t){
             const ratio = (tClamped - a.t) / (b.t - a.t);
-            v = a.valor + (b.valor - a.valor) * ratio;
+            v    = a.valor + (b.valor - a.valor) * ratio;
             yVal = yScale(v);
-            dir = b.valor - a.valor;
+            dir  = b.valor - a.valor;
             break;
           }
         }
@@ -787,7 +1003,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
       const xCursor = xScale(tClamped);
 
-      // línea vertical
       ctx.save();
       ctx.strokeStyle = "rgba(255,255,255,0.4)";
       ctx.setLineDash([4,3]);
@@ -797,7 +1012,6 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       ctx.stroke();
       ctx.restore();
 
-      // punto verde/rojo
       ctx.save();
       ctx.fillStyle = dir >= 0 ? "#35c759" : "#ff453a";
       ctx.beginPath();
@@ -813,18 +1027,14 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     }
   }
 
-
-
-  // Listener de periodo
   const $periodo = document.getElementById("periodo");
   if($periodo){
     $periodo.addEventListener("change", renderDashboard);
   }
 
-
   // ------- Persistencia -------
   function persistLocal(){
-    localStorage.setItem(KEY_DATA, JSON.stringify(state.registros));
+    localStorage.setItem(KEY_DATA,    JSON.stringify(state.registros));
     localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
   }
 
@@ -833,52 +1043,107 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     const cuentas=state.cuentas;
     const headers=["Fecha",...cuentas,"TOTAL","Variación","%Var"];
     const rows=[headers.join(",")];
+
     state.registros.forEach(r=>{
       const vals=cuentas.map(c=>(r.saldos[c]||0).toFixed(2));
-      rows.push([r.fecha,...vals,r.total.toFixed(2),r.variacion.toFixed(2),(r.varpct*100).toFixed(2)+"%"].join(","));
+      rows.push([
+        r.fecha,
+        ...vals,
+        r.total.toFixed(2),
+        r.variacion.toFixed(2),
+        (r.varpct*100).toFixed(2)+"%"
+      ].join(","));
     });
+
     return rows.join("\n");
   }
-  function download(filename,text){ const blob=new Blob([text],{type:"text/csv;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href); }
-  function onExportar(){ download("mis_cuentas_fase1.csv",registrosToCSV()); }
+
+  function download(filename,text){
+    const blob=new Blob([text],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function onExportar(){
+    download("mis_cuentas_fase1.csv",registrosToCSV());
+  }
 
   async function onImportar(){
     const file=document.getElementById("file-csv").files[0];
     if(!file){ alert("Selecciona un CSV."); return; }
-    const txt=await file.text(); const lines=txt.trim().split(/\r?\n/);
-    const headers=lines[0].split(","); const fechaIdx=headers.indexOf("Fecha");
+
+    const txt=await file.text();
+    const lines=txt.trim().split(/\r?\n/);
+    const headers=lines[0].split(",");
+    const fechaIdx=headers.indexOf("Fecha");
     const cuentas=headers.filter(h=>!["Fecha","TOTAL","Variación","%Var"].includes(h));
-    if(cuentas.length){ state.cuentas=cuentas; persistLocal(); }
+
+    if(cuentas.length){
+      state.cuentas=cuentas;
+      persistLocal();
+    }
+
     const registros=[];
     for(let i=1;i<lines.length;i++){
-      const cols=lines[i].split(","); if(!cols[fechaIdx]) continue;
-      const fecha=cols[fechaIdx]; const saldos={};
-      state.cuentas.forEach(c=>{ const colIdx=headers.indexOf(c); saldos[c]=esToNumber(cols[colIdx]); });
+      const cols=lines[i].split(",");
+      if(!cols[fechaIdx]) continue;
+      const fecha=cols[fechaIdx];
+      const saldos={};
+      state.cuentas.forEach(c=>{
+        const colIdx=headers.indexOf(c);
+        saldos[c]=esToNumber(cols[colIdx]);
+      });
       const total=Object.values(saldos).reduce((a,b)=>a+b,0);
       registros.push({fecha,saldos,total,variacion:0,varpct:0});
     }
-    state.registros=registros; recalcVariaciones(); persistLocal(); renderInputs({}); renderTabla(); renderDashboard();
+
+    state.registros=registros;
+    recalcVariaciones();
+    persistLocal();
+    renderInputs({});
+    renderTabla();
+    renderDashboard();
+
     try{
       setStatus("Sincronizando…");
       await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+        cuentas: state.cuentas,
+        registros: state.registros,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
       setStatus("✔ Sincronizado"); setTimeout(()=>setStatus(""),1200);
-    }catch(e){ console.error(e); setStatus("✖ Error sync"); }
+    }catch(e){
+      console.error(e);
+      setStatus("✖ Error sync");
+    }
   }
 
   function borrarTodo(){
     if(!confirm("Borrar todos los datos?")) return;
-    state.registros=[]; persistLocal(); renderTabla(); renderDashboard();
+    state.registros=[];
+    persistLocal();
+    renderTabla();
+    renderDashboard();
     firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
       cuentas: state.cuentas, registros: [], updatedAt: firebase.database.ServerValue.TIMESTAMP
     }).catch(console.error);
   }
 
   function addCuenta(){
-    const nombre=prompt("Nombre de la cuenta:"); if(!nombre) return;
-    if(state.cuentas.indexOf(nombre)>=0){ alert("Ya existe."); return; }
-    state.cuentas.push(nombre); persistLocal(); renderInputs({}); renderTabla(); renderDashboard();
+    const nombre=prompt("Nombre de la cuenta:");
+    if(!nombre) return;
+    if(state.cuentas.indexOf(nombre)>=0){
+      alert("Ya existe.");
+      return;
+    }
+    state.cuentas.push(nombre);
+    persistLocal();
+    renderInputs({});
+    renderTabla();
+    renderDashboard();
     firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
   }
 
@@ -889,17 +1154,15 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       const v=snap.val(); if(!v) return;
       if(Array.isArray(v.cuentas)&&v.cuentas.length) state.cuentas=v.cuentas;
       if(Array.isArray(v.registros)) state.registros=v.registros;
-      persistLocal(); renderInputs({}); renderTabla(); renderDashboard(); setStatus("↻ Actualizado");
+      persistLocal();
+      renderInputs({});
+      renderTabla();
+      renderDashboard();
+      setStatus("↻ Actualizado");
       setTimeout(()=>setStatus(""),1000);
     });
   }
 
-  // ------- Init -------
-  (function init(){
-    const today=new Date(); $fecha.value=ymd(today);
-    renderInputs({}); renderTabla(); renderDashboard(); attachCloudListeners(); setGuardarLabel();
-  })();
-})();
   // interacción tipo Revolut en la gráfica de cuenta
   if ($cuentaChart){
     let draggingCuenta = false;
@@ -941,3 +1204,15 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       draggingCuenta = false;
     });
   }
+
+  // ------- Init -------
+  (function init(){
+    const today=new Date();
+    if ($fecha) $fecha.value=ymd(today);
+    renderInputs({});
+    renderTabla();
+    renderDashboard();
+    attachCloudListeners();
+    setGuardarLabel();
+  })();
+})();

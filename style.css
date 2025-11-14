@@ -159,7 +159,7 @@ h1 {
   color: var(--muted);
 }
 
-/* ===== Actions (incluye file input) ===== */
+/* ===== Actions (base) ===== */
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -177,6 +177,43 @@ h1 {
   font-size: 16px;
   white-space: nowrap;
   margin-bottom: 10px;
+}
+
+/* ===== Barra superior compacta (sin saltos) ===== */
+.actions-top {
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.actions-top button,
+.actions-top select {
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.actions-top button {
+  flex: 0 0 auto;
+}
+
+.actions-top select {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.actions-top #status {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* segunda fila de variaciones: también en una sola línea */
+.actions-variaciones {
+  flex-wrap: nowrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 /* ===== FILE INPUT ===== */
@@ -224,8 +261,8 @@ h1 {
 .table table {
   border-collapse: separate;
   border-spacing: 0;
-  width: max-content; /* crece según columnas */
-  min-width: 100%;    /* nunca menos que el panel */
+  width: max-content;
+  min-width: 100%;
   table-layout: auto;
 }
 
@@ -289,13 +326,12 @@ th .col-toggle {
 .modal__dialog {
   position: relative;
   width: 100%;
-  max-width: 370px;   /* ancho máximo del modal */
-  margin: 8vh auto;   /* separación vertical */
+  max-width: 370px;
+  margin: 8vh auto;
   margin-left: 10px;
-    margin-left: 10px;
   margin-right: 0px;
 
-  max-height: 84vh;   /* alto máximo del modal */
+  max-height: 84vh;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -369,7 +405,7 @@ th .col-toggle {
   margin: 0;
   font-size: 16px;
   color: #d0d6e1;
-  padding-right: 54px; /* deja hueco a la insignia */
+  padding-right: 54px;
 }
 
 /* insignia arriba-derecha con % y € */
@@ -409,27 +445,48 @@ th .col-toggle {
   font-size: 16px;
 }
 
-/* selector periodo */
-#periodo {
+/* selector periodo + comparador */
+#periodo,
+#comparar {
   background: #0e121a;
   color: #eaeef5;
   border: 1px solid var(--line);
   border-radius: 10px;
-  padding: 10px 10px;
-  font-size: 16px;
+  padding: 1px 10px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+#comparar {
+  font-size: 1px;
+}
+#periodo {
+  padding-right: 2px;
+}
+
+/* en barra compacta, quitamos margen extra */
+.actions-top #periodo,
+.actions-top #comparar {
   margin-bottom: 10px;
 }
 
-/* resumen variación total (al lado de Historial) */
+/* resumen variación total */
 .var-total {
-  margin-left: 6px;
-  margin-bottom: 6px;
-  padding: 6px 10px;
+  margin-left: 0;
+  margin-bottom: 10px;
+  padding: 4px 5px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--line);
   backdrop-filter: blur(9px);
+  padding: 2px 8px;
+}
+
+/* variaciones: que ocupen cada una la mitad */
+.actions-variaciones .var-total,
+.actions-variaciones .var-comparada {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .var-total.pos {
@@ -438,6 +495,30 @@ th .col-toggle {
 }
 
 .var-total.neg {
+  background: rgba(60, 20, 20, 0.45);
+  color: #ffd0d0;
+}
+
+/* resumen comparado mes/semana */
+.var-comparada {
+  margin-left: 0;
+  margin-bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(9px);
+}
+#btn-abrir-modal, #btn-historial{
+  padding: 4px;
+}
+.var-comparada.pos {
+  background: rgba(20, 60, 30, 0.45);
+  color: #b9f5c4;
+}
+
+.var-comparada.neg {
   background: rgba(60, 20, 20, 0.45);
   color: #ffd0d0;
 }
@@ -519,6 +600,7 @@ body.trend-neutral {
   border-radius: 16px;
   border: 0 solid var(--line);
   align-self: flex-end;
+
 }
 
 /* ===== Responsive ===== */
@@ -547,61 +629,62 @@ input:focus-visible {
   input,
   select,
   textarea {
-    font-size: 16px !important;
+    font-size: 14px !important;
   }
 }
+
 /* ---- Acciones en tabla detalle cuenta (3 puntitos flotante) ---- */
-.table-cuenta td.actions-cell{
-  position:relative;
-  text-align:right;
-  padding-right:0;
+.table-cuenta td.actions-cell {
+  position: relative;
+  text-align: right;
+  padding-right: 0;
 }
 
-.dots-btn{
-  width:28px;
-  height:28px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  background:#0e121a;
-  color:#eaeef5;
-  font-size:16px;
-  line-height:1;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
+.dots-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0e121a;
+  color: #eaeef5;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 /* menú flotante GLOBAL (no empuja la tabla) */
-.row-menu{
-  position:fixed;              /* ⬅️ flotante respecto a la ventana */
-  min-width:120px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:10px;
-  box-shadow:0 10px 30px rgba(0,0,0,.6);
-  padding:4px 0;
-  z-index:99999;
+.row-menu {
+  position: fixed;
+  min-width: 120px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  padding: 4px 0;
+  z-index: 99999;
 
-  display:none;
-  flex-direction:column;
+  display: none;
+  flex-direction: column;
 }
 
-.row-menu.open{
-  display:flex;
+.row-menu.open {
+  display: flex;
 }
 
-.row-menu button{
-  width:100%;
-  border:0;
-  background:transparent;
-  color:#eaeef5;
-  text-align:left;
-  padding:6px 10px;
-  font-size:13px;
-  cursor:pointer;
+.row-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #eaeef5;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
-.row-menu button:hover{
-  background:rgba(255,255,255,0.05);
+.row-menu button:hover {
+  background: rgba(255,255,255,0.05);
 }
