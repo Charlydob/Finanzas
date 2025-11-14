@@ -529,27 +529,47 @@ function setColVisibilityByName(tableEl, cols, name, visible){
 
     ctx.clearRect(0,0,w,h);
 
-    const xs = puntos.map(p => new Date(p.fecha).getTime());
-    const ys = puntos.map(p => p.valor);
+    const xsTime = puntos.map(p => new Date(p.fecha).getTime());
+    const ysVal  = puntos.map(p => p.valor);
 
-    let minX = Math.min(...xs);
-    let maxX = Math.max(...xs);
-    if (minX === maxX) maxX = minX + 24*60*60*1000;
+    let minX = Math.min(...xsTime);
+    let maxX = Math.max(...xsTime);
+    if (minX === maxX) maxX = minX + 24*60*60*1000; // un día de margen
 
-    let minY = Math.min(...ys);
-    let maxY = Math.max(...ys);
-    if (minY === maxY){
-      const delta = Math.abs(minY || 1);
-      minY -= delta * 0.1;
-      maxY += delta * 0.1;
-    }
+    let minY = 0;
+    let maxY = Math.max(...ysVal);
+    if (!isFinite(maxY) || maxY <= 0) maxY = 1;
 
     const xScale = t => padding + ((t - minX) / (maxX - minX)) * (w - 2*padding);
     const yScale = v => h - padding - ((v - minY) / (maxY - minY)) * (h - 2*padding);
 
+    // puntos proyectados al canvas
+    const points = puntos.map(p => {
+      const t = new Date(p.fecha).getTime();
+      return {
+        t,
+        valor: p.valor,
+        x: xScale(t),
+        y: yScale(p.valor)
+      };
+    });
+
+    // guardar para interacción
+    canvas._chartData = {
+      points,
+      minX,
+      maxX,
+      minY,
+      maxY,
+      padding,
+      w,
+      h
+    };
+    canvas._puntos = puntos.slice();
+
     // ejes
     ctx.save();
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.35;
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -559,32 +579,106 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     ctx.stroke();
     ctx.restore();
 
-    // línea
+    // línea suavizada
     ctx.save();
     ctx.strokeStyle = "#67d5ff";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    puntos.forEach((p,i)=>{
-      const x = xScale(new Date(p.fecha).getTime());
-      const y = yScale(p.valor);
-      if (i === 0) ctx.moveTo(x,y);
-      else ctx.lineTo(x,y);
-    });
+    if (points.length === 1){
+      ctx.moveTo(points[0].x, points[0].y);
+      ctx.lineTo(points[0].x, points[0].y);
+    } else {
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length - 1; i++){
+        const xc = (points[i].x + points[i+1].x) / 2;
+        const yc = (points[i].y + points[i+1].y) / 2;
+        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+      }
+      const last = points[points.length - 1];
+      ctx.quadraticCurveTo(last.x, last.y, last.x, last.y);
+    }
     ctx.stroke();
     ctx.restore();
 
-    // puntos
+    // puntos coloreados según subida/bajada
     ctx.save();
-    ctx.fillStyle = "#ffffff";
-    puntos.forEach(p=>{
-      const x = xScale(new Date(p.fecha).getTime());
-      const y = yScale(p.valor);
+    for (let i = 0; i < points.length; i++){
+      let color = "#cccccc"; // primero neutro
+      if (i > 0){
+        const diff = points[i].valor - points[i-1].valor;
+        if (diff > 0) color = "#35c759";
+        else if (diff < 0) color = "#ff453a";
+      }
+      ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.arc(points[i].x, points[i].y, 3, 0, Math.PI*2);
       ctx.fill();
-    });
+    }
     ctx.restore();
+
+    // cursor interactivo tipo Revolut
+    if (typeof canvas._hoverT === "number"){
+      const hoverT = canvas._hoverT;
+      const tooltipEl = document.getElementById("cuenta-tooltip");
+
+      const tClamped = Math.max(minX, Math.min(maxX, hoverT));
+
+      let v = points[0].valor;
+      let dir = 0;
+      let yVal = points[0].y;
+
+      if (tClamped <= points[0].t){
+        v = points[0].valor;
+        yVal = points[0].y;
+        dir = 0;
+      } else if (tClamped >= points[points.length-1].t){
+        const a = points[points.length-2];
+        const b = points[points.length-1];
+        v = b.valor;
+        yVal = b.y;
+        dir = b.valor - a.valor;
+      } else {
+        for (let i = 0; i < points.length-1; i++){
+          const a = points[i];
+          const b = points[i+1];
+          if (tClamped >= a.t && tClamped <= b.t){
+            const ratio = (tClamped - a.t) / (b.t - a.t);
+            v = a.valor + (b.valor - a.valor) * ratio;
+            yVal = yScale(v);
+            dir = b.valor - a.valor;
+            break;
+          }
+        }
+      }
+
+      const xCursor = xScale(tClamped);
+
+      // línea vertical
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      ctx.moveTo(xCursor, padding/2);
+      ctx.lineTo(xCursor, h - padding);
+      ctx.stroke();
+      ctx.restore();
+
+      // punto verde/rojo
+      ctx.save();
+      ctx.fillStyle = dir >= 0 ? "#35c759" : "#ff453a";
+      ctx.beginPath();
+      ctx.arc(xCursor, yVal, 4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+
+      if (tooltipEl){
+        const date = new Date(tClamped);
+        const iso = !isNaN(date) ? date.toISOString().slice(0,10) : "";
+        tooltipEl.textContent = iso ? `${iso} · ${numberToEs(v)}` : numberToEs(v);
+      }
+    }
   }
+
 
   // Listener de periodo
   const $periodo = document.getElementById("periodo");
@@ -671,3 +765,41 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     renderInputs({}); renderTabla(); renderDashboard(); attachCloudListeners(); setGuardarLabel();
   })();
 })();
+  // interacción tipo Revolut en la gráfica de cuenta
+  if ($cuentaChart){
+    let draggingCuenta = false;
+
+    function updateCuentaHover(evt){
+      const data = $cuentaChart._chartData;
+      if (!data) return;
+      const rect = $cuentaChart.getBoundingClientRect();
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const x = clientX - rect.left;
+
+      const { minX, maxX, padding, w } = data;
+      const usableWidth = w - 2*padding;
+      if (usableWidth <= 0) return;
+
+      const clampedX = Math.max(padding, Math.min(w - padding, x));
+      const ratio = (clampedX - padding) / usableWidth;
+      const t = minX + ratio * (maxX - minX);
+
+      $cuentaChart._hoverT = t;
+      drawCuentaChart($cuentaChart, $cuentaChart._puntos || []);
+    }
+
+    $cuentaChart.addEventListener("pointerdown", evt => {
+      draggingCuenta = true;
+      updateCuentaHover(evt);
+    });
+    $cuentaChart.addEventListener("pointermove", evt => {
+      if (!draggingCuenta) return;
+      updateCuentaHover(evt);
+    });
+    window.addEventListener("pointerup", () => {
+      draggingCuenta = false;
+    });
+    $cuentaChart.addEventListener("pointerleave", () => {
+      draggingCuenta = false;
+    });
+  }

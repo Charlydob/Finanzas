@@ -3,13 +3,20 @@
 *::before,
 *::after { box-sizing: border-box; min-width: 0; }
 
-html { height: 100%; -webkit-text-size-adjust: 100%; }
+html {
+  min-height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  margin: 0; height: 100%;
-  background: #0d0f12; color: #eaeef5;
+  margin: 0;
+  min-height: 100vh;
+  background: #0d0f12;
+  color: #eaeef5;
   font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
   overflow-x: hidden;
 }
+
 
 /* Contenedor centrado y ancho fijo de app móvil */
 .app-wrap, header, main { max-width: 420px; margin: 0 auto; width: 100%; }
@@ -255,3 +262,22 @@ body.trend-neg{
 }
 .table-cuenta td.pos{ color:#35c759; }
 .table-cuenta td.neg{ color:#ff453a; }
+body.trend-pos{
+  background: radial-gradient(circle at top, rgba(40,120,60,.28), transparent 65%) #0d0f12;
+  background-attachment: fixed;
+}
+
+body.trend-neg{
+  background: radial-gradient(circle at top, rgba(140,40,40,.28), transparent 65%) #0d0f12;
+  background-attachment: fixed;
+}
+
+body.trend-neutral{
+  background: #0d0f12;
+}
+.cuenta-tooltip{
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+  text-align: center;
+}
