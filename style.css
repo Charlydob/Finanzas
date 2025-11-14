@@ -189,3 +189,69 @@ button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outl
   background:#0e121a; color:#eaeef5; border:1px solid var(--line);
   border-radius:10px; padding:10px 10px; font-size:16px;margin-bottom: 10px;
 }
+/* resumen variación total (al lado de Historial) */
+.var-total{
+  margin-left:6px;
+  margin-bottom: 6px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  background: rgba(0,0,0,.25);
+  border:1px solid var(--line);
+  backdrop-filter: blur(9px);
+}
+.var-total.pos{
+  background: rgba(20, 60, 30, .45);
+  color:#b9f5c4;
+}
+.var-total.neg{
+  background: rgba(60, 20, 20, .45);
+  color:#ffd0d0;
+}
+
+/* tono global según variación total */
+body.trend-pos{
+  background: radial-gradient(circle at top, rgba(24, 145, 54, 0.25), transparent 80%) #0d0f12;
+}
+body.trend-neg{
+  background: radial-gradient(circle at top, rgba(186, 21, 21, 0.254), transparent 80%) #0d0f12;
+}
+.modal__dialog {
+  padding: 0px;
+
+}
+/* modal detalle cuenta glass rojo/verde */
+.modal-cuenta-dialog.pos{
+  background: rgba(24, 190, 65, 0.444);
+  box-shadow: 0 18px 50px rgba(0,128,0,.35);
+}
+.modal-cuenta-dialog.neg{
+  background: rgba(188, 18, 18, 0.427);
+  box-shadow: 0 18px 50px rgba(255,0,0,.35);
+  border-bottom:px solid var(--line);
+}
+
+.table-wrapper{
+  max-height:220px;
+  overflow:auto;
+  border-radius: 10px;
+}
+
+.table-cuenta{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+  border-radius: 10px;
+}
+.table-cuenta th,
+.table-cuenta td{
+  border-bottom:px solid var(--line);
+  padding:6px 4px;
+  text-align:right;
+}
+.table-cuenta th:first-child,
+.table-cuenta td:first-child{
+  text-align:left;
+}
+.table-cuenta td.pos{ color:#35c759; }
+.table-cuenta td.neg{ color:#ff453a; }

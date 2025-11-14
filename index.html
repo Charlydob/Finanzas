@@ -13,6 +13,7 @@
 </header>
 
 <main>
+<main>
   <!-- DASHBOARD -->
   <section class="paneldashboard">
     <div class="actions">
@@ -23,11 +24,11 @@
         <option value="anio">Año</option>
       </select>
       <button id="btn-historial">Historial</button>
+      <span id="var-total" class="var-total">Mes: 0,00 € (0,00%)</span>
       <span id="status" style="margin-left:auto;"></span>
     </div>
     <div id="dashboard" class="cards"></div>
   </section>
-
 </main>
 
 <!-- MODAL HISTORIAL -->
@@ -53,6 +54,36 @@
   </div>
 </div>
 
+<!-- MODAL DETALLE CUENTA -->
+<div id="modal-cuenta" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" id="modal-cuenta-close"></div>
+  <div class="modal__dialog modal-cuenta-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-cuenta-title">
+    <header class="modal__header">
+      <h3 id="modal-cuenta-title">Detalle de cuenta</h3>
+    </header>
+    <div class="modal__body">
+      <canvas id="cuenta-chart" width="360" height="180"></canvas>
+      <div class="table-wrapper">
+        <table class="table-cuenta">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Valor</th>
+              <th>Δ€</th>
+              <th>Δ%</th>
+            </tr>
+          </thead>
+          <tbody id="cuenta-historial-body"></tbody>
+        </table>
+      </div>
+    </div>
+    <footer class="modal__footer">
+      <div class="actions">
+        <button id="btn-cerrar-modal-cuenta" class="btn-secondary">Cerrar</button>
+      </div>
+    </footer>
+  </div>
+</div>
 
 <!-- MODAL ACTUALIZAR -->
 <div id="modal" class="modal" aria-hidden="true">

@@ -35,16 +35,28 @@
   const $restore = document.getElementById("col-restore");
   const $status = document.getElementById("status");
   const $dashboard = document.getElementById("dashboard");
+
+  // modales
   const $modal = document.getElementById("modal");
   const $btnAbrirModal = document.getElementById("btn-abrir-modal");
   const $btnCerrarModal = document.getElementById("btn-cerrar-modal");
   const $modalBackdrop = document.getElementById("modal-close");
 
-  // Modal Historial
   const $modalHistorial = document.getElementById("modal-historial");
   const $btnHistorial = document.getElementById("btn-historial");
   const $btnCerrarModalHistorial = document.getElementById("btn-cerrar-modal-historial");
   const $modalHistorialBackdrop = document.getElementById("modal-historial-close");
+
+  const $modalCuenta = document.getElementById("modal-cuenta");
+  const $modalCuentaDialog = document.querySelector("#modal-cuenta .modal__dialog");
+  const $modalCuentaTitle = document.getElementById("modal-cuenta-title");
+  const $modalCuentaBackdrop = document.getElementById("modal-cuenta-close");
+  const $btnCerrarModalCuenta = document.getElementById("btn-cerrar-modal-cuenta");
+  const $cuentaChart = document.getElementById("cuenta-chart");
+  const $cuentaHistBody = document.getElementById("cuenta-historial-body");
+
+  const $varTotal = document.getElementById("var-total");
+  const $body = document.body;
 
   function setStatus(txt){ $status.textContent = txt || ""; }
 
@@ -72,11 +84,13 @@
   if ($btnCerrarModalHistorial) $btnCerrarModalHistorial.addEventListener("click", closeHistorialModal);
   if ($modalHistorialBackdrop) $modalHistorialBackdrop.addEventListener("click", closeHistorialModal);
 
-  // ------- Modal -------
+  if ($btnCerrarModalCuenta) $btnCerrarModalCuenta.addEventListener("click", closeCuentaModal);
+  if ($modalCuentaBackdrop) $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
+
+  // ------- Modales -------
   function openModal(){
     $modal.setAttribute("aria-hidden", "false");
   }
-
   function closeModal(){
     $modal.setAttribute("aria-hidden", "true");
     state.editingIndex = -1;
@@ -86,9 +100,20 @@
   function openHistorialModal(){
     if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden", "false");
   }
-
   function closeHistorialModal(){
     if ($modalHistorial) $modalHistorial.setAttribute("aria-hidden", "true");
+  }
+
+  function openCuentaModal(nombreCuenta){
+    if (!$modalCuenta) return;
+    state.cuentaSeleccionada = nombreCuenta;
+    if ($modalCuentaTitle) $modalCuentaTitle.textContent = nombreCuenta;
+    buildCuentaDetalle(nombreCuenta);
+    $modalCuenta.setAttribute("aria-hidden", "false");
+  }
+  function closeCuentaModal(){
+    if ($modalCuenta) $modalCuenta.setAttribute("aria-hidden", "true");
+    state.cuentaSeleccionada = null;
   }
 
   function renderInputs(valores){
@@ -99,11 +124,12 @@
       const input=document.createElement("input");
       input.type="text"; input.inputMode="decimal"; input.placeholder="0,00 €"; input.autocomplete="off"; input.style.fontSize="16px";
       input.value = valores && (valores[c]!==undefined) ? valores[c] : "";
-      input.addEventListener("input", calcularTotal);
-      row.append(label,input); $wrapper.append(row);
+      input.addEventListener("blur", ()=>{ input.value = numberToEs(esToNumber(input.value)); });
+      row.append(label,input);
+      $wrapper.append(row);
     });
-    calcularTotal();
   }
+
   function setInputsFromSaldos(s){
     $wrapper.querySelectorAll(".item").forEach(row=>{
       const name=row.querySelector("label").textContent;
@@ -331,11 +357,22 @@ function setColVisibilityByName(tableEl, cols, name, visible){
     $dashboard.innerHTML="";
     if(!state.registros.length){
       $dashboard.innerHTML = '<div class="muted">Sin datos. Pulsa “Actualizar”.</div>';
+      if ($varTotal) {
+        $varTotal.textContent = "Mes: 0,00 € (0,00%)";
+        $varTotal.className = "var-total";
+      }
+      if ($body) {
+        $body.classList.remove("trend-pos","trend-neg","trend-neutral");
+        $body.classList.add("trend-neutral");
+      }
       return;
     }
 
     const periodoSel = (document.getElementById("periodo")?.value) || "mes";
     const deltas = computeDeltaByAccount(periodoSel);
+
+    // actualizar resumen variación total y fondo
+    updateTotalVariation(deltas, periodoSel);
 
     // Tarjeta por cuenta
     state.cuentas.forEach(cta=>{
@@ -364,8 +401,189 @@ function setColVisibilityByName(tableEl, cols, name, visible){
       nowEl.textContent = numberToEs(nowVal);
       card.append(nowEl);
 
+      // abrir detalle de esa cuenta al click
+      card.addEventListener("click", ()=> openCuentaModal(cta));
+
       $dashboard.append(card);
     });
+  }
+
+  function updateTotalVariation(deltas, periodoSel){
+    if (!$varTotal) return;
+
+    let totalDiff = 0;
+    let totalNow = 0;
+
+    state.cuentas.forEach(cta=>{
+      const info = deltas[cta];
+      if (!info) return;
+      totalDiff += info.diff;
+      totalNow += info.nowVal;
+    });
+
+    const baseTotal = totalNow - totalDiff;
+    const pct = baseTotal !== 0 ? (totalDiff / baseTotal) : 0;
+    const scopeLabel = (periodoSel==="semana"?"Semana": periodoSel==="anio"?"Año":"Mes");
+
+    $varTotal.textContent = `${scopeLabel}: ${numberToEs(totalDiff)} (${pctToEs(pct)})`;
+
+    let cls = "var-total";
+    if (totalDiff > 0) cls += " pos";
+    else if (totalDiff < 0) cls += " neg";
+    $varTotal.className = cls;
+
+    if ($body){
+      $body.classList.remove("trend-pos","trend-neg","trend-neutral");
+      if (totalDiff > 0) $body.classList.add("trend-pos");
+      else if (totalDiff < 0) $body.classList.add("trend-neg");
+      else $body.classList.add("trend-neutral");
+    }
+  }
+
+  function buildCuentaDetalle(nombreCuenta){
+    if (!$cuentaHistBody || !$cuentaChart) return;
+
+    const regsOrdenados = state.registros.slice().sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
+    const puntos = [];
+
+    regsOrdenados.forEach(r=>{
+      if (!r.saldos) return;
+      const v = r.saldos[nombreCuenta];
+      if (!Number.isFinite(v)) return;
+      puntos.push({ fecha: r.fecha, valor: v });
+    });
+
+    const ctx = $cuentaChart.getContext("2d");
+    ctx.clearRect(0,0,$cuentaChart.width,$cuentaChart.height);
+
+    $cuentaHistBody.innerHTML = "";
+    if (!puntos.length){
+      return;
+    }
+
+    let prevVal = null;
+    let lastDiff = 0;
+
+    puntos.forEach(p=>{
+      let diffStr = "—";
+      let pctStr = "—";
+      let diff = 0;
+      let pct = 0;
+
+      if (prevVal !== null){
+        diff = p.valor - prevVal;
+        diffStr = numberToEs(diff);
+        if (prevVal !== 0){
+          pct = diff / prevVal;
+          pctStr = pctToEs(pct);
+        } else {
+          pctStr = "—";
+        }
+        lastDiff = diff;
+      }
+
+      const tr = document.createElement("tr");
+
+      const tdFecha = document.createElement("td");
+      tdFecha.textContent = p.fecha;
+
+      const tdValor = document.createElement("td");
+      tdValor.textContent = numberToEs(p.valor);
+
+      const tdDiffEur = document.createElement("td");
+      tdDiffEur.textContent = diffStr;
+
+      const tdDiffPct = document.createElement("td");
+      tdDiffPct.textContent = pctStr;
+
+      if (diff < 0){
+        tdDiffEur.classList.add("neg");
+        tdDiffPct.classList.add("neg");
+      } else if (diff > 0){
+        tdDiffEur.classList.add("pos");
+        tdDiffPct.classList.add("pos");
+      }
+
+      tr.append(tdFecha, tdValor, tdDiffEur, tdDiffPct);
+      $cuentaHistBody.append(tr);
+
+      prevVal = p.valor;
+    });
+
+    if ($modalCuentaDialog){
+      $modalCuentaDialog.classList.remove("pos","neg");
+      if (lastDiff > 0) $modalCuentaDialog.classList.add("pos");
+      else if (lastDiff < 0) $modalCuentaDialog.classList.add("neg");
+    }
+
+    drawCuentaChart($cuentaChart, puntos);
+  }
+
+
+  function drawCuentaChart(canvas, puntos){
+    if (!canvas || !puntos.length) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+    const padding = 20;
+
+    ctx.clearRect(0,0,w,h);
+
+    const xs = puntos.map(p => new Date(p.fecha).getTime());
+    const ys = puntos.map(p => p.valor);
+
+    let minX = Math.min(...xs);
+    let maxX = Math.max(...xs);
+    if (minX === maxX) maxX = minX + 24*60*60*1000;
+
+    let minY = Math.min(...ys);
+    let maxY = Math.max(...ys);
+    if (minY === maxY){
+      const delta = Math.abs(minY || 1);
+      minY -= delta * 0.1;
+      maxY += delta * 0.1;
+    }
+
+    const xScale = t => padding + ((t - minX) / (maxX - minX)) * (w - 2*padding);
+    const yScale = v => h - padding - ((v - minY) / (maxY - minY)) * (h - 2*padding);
+
+    // ejes
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padding, padding/2);
+    ctx.lineTo(padding, h - padding);
+    ctx.lineTo(w - padding/2, h - padding);
+    ctx.stroke();
+    ctx.restore();
+
+    // línea
+    ctx.save();
+    ctx.strokeStyle = "#67d5ff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    puntos.forEach((p,i)=>{
+      const x = xScale(new Date(p.fecha).getTime());
+      const y = yScale(p.valor);
+      if (i === 0) ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    ctx.restore();
+
+    // puntos
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
+    puntos.forEach(p=>{
+      const x = xScale(new Date(p.fecha).getTime());
+      const y = yScale(p.valor);
+      ctx.beginPath();
+      ctx.arc(x,y,3,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.restore();
   }
 
   // Listener de periodo
