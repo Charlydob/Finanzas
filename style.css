@@ -8,7 +8,7 @@ body {
   margin: 0; height: 100%;
   background: #0d0f12; color: #eaeef5;
   font-family: system-ui, Segoe UI, Roboto, Inter, Arial;
-  overflow-x: hidden; /* evita scroll horizontal global */
+  overflow-x: hidden;
 }
 
 /* Contenedor centrado y ancho fijo de app móvil */
@@ -18,6 +18,7 @@ main { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
 /* ===== Tokens ===== */
 :root{
   --card:#151922; --muted:#98a2b3; --line:#202636; --accent:#7cc0ff; --radius:14px;
+  --ok:#35c759; --bad:#ff453a;
 }
 
 /* ===== Head ===== */
@@ -34,10 +35,14 @@ h1{ margin:0 0 6px 0; font-size:20px; }
 .panel{
   background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
   padding:14px; box-shadow:0 6px 24px #0004;
-  overflow:hidden; /* asegura que nada desborde el panel */
+  overflow:hidden;
 }
-
-/* ===== Filas ===== */
+.paneldashboard{
+  background:transparent; border:0px solid var(--line); border-radius:var(--radius);
+  padding:0px; box-shadow:0;
+  overflow:hidden;
+}
+/* ===== Filas / Inputs ===== */
 .row{
   display:flex; justify-content:space-between; align-items:center; gap:10px; margin:8px 0;
 }
@@ -51,7 +56,7 @@ h1{ margin:0 0 6px 0; font-size:20px; }
 .item{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin:6px 0 }
 .item label{ flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis }
 .item input{
-  flex:0 0 150px; text-align:right; font-size:16px; line-height:1.2; /* anti-zoom iOS */
+  flex:0 0 150px; text-align:right; font-size:16px; line-height:1.2;
   background:#0e121a; color:#eaeef5; border:1px solid var(--line); border-radius:10px; padding:10px;
 }
 
@@ -62,120 +67,125 @@ h1{ margin:0 0 6px 0; font-size:20px; }
 .actions{
   display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center;
 }
-
-/* Botones */
 .actions button{
   background:#0e121a; color:#eaeef5; border:1px solid var(--line);
-  padding:10px 12px; border-radius:10px; font-size:16px;
-  white-space:nowrap;
+  padding:10px 12px; border-radius:10px; font-size:16px; white-space:nowrap;margin-bottom: 10px;
 }
 
-/* ====== FILE INPUT (#file-csv) ======
-   Evita que rompa el ancho, y dale estilo consistente de botón + texto truncado */
+/* ===== FILE INPUT ===== */
 #file-csv{
-  display:inline-block;
-  max-width:100%;
-  width:auto; /* que crezca hasta donde pueda en la fila */
-  color:var(--muted);
-  background:#0e121a;
-  border:1px solid var(--line);
-  border-radius:10px;
-  padding:8px 10px;
-  font-size:16px; line-height:1.2;    /* anti-zoom iOS */
+  display:inline-block; max-width:100%; width:auto;
+  color:var(--muted); background:#0e121a; border:1px solid var(--line);
+  border-radius:10px; padding:8px 10px; font-size:16px; line-height:1.2;
   overflow:hidden; text-overflow:ellipsis;
 }
-
-/* Estilo del botón interno del file input (Chromium/Firefox) */
-#file-csv::file-selector-button{
-  background:#0e121a;
-  color:#eaeef5;
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:8px 10px;
-  margin-right:8px;
-  font-size:16px;
-  cursor:pointer;
-}
-
-/* Safari/WebKit */
+#file-csv::file-selector-button,
 #file-csv::-webkit-file-upload-button{
-  background:#0e121a;
-  color:#eaeef5;
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:8px 10px;
-  margin-right:8px;
-  font-size:16px;
-  cursor:pointer;
+  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
+  border-radius:8px; padding:8px 10px; margin-right:8px; font-size:16px; cursor:pointer;
 }
-
-/* Hace que el file input no fuerce el alto de la fila y corte nombres largos */
 .actions #file-csv{ flex:1 1 220px; min-width:180px; }
 
-/* ===== Tabla (scroll-x interno sin romper layout) ===== */
-/* ===== Tabla (scroll-x interno sin romper layout) ===== */
+/* ===== Tabla (scroll-x interno + sticky primera columna) ===== */
 .table{
-  width:100%;
-  overflow-x:auto;               /* scroll lateral dentro del contenedor */
-  border:1px solid var(--line);
-  border-radius:12px;
+  width:100%; overflow-x:auto;
+  border:1px solid var(--line); border-radius:12px;
   -webkit-overflow-scrolling:touch;
 }
-
-/* ancho natural de columnas para que no se monten unas sobre otras */
-table{
-  border-collapse:separate;
-  border-spacing:0;
-  width:max-content;             /* crece lo que haga falta */
-  min-width:100%;                /* como mínimo ocupa el ancho del panel */
-  table-layout:auto;             /* deja al navegador calcular anchos */
+.table table{
+  border-collapse:separate; border-spacing:0;
+  width:max-content;           /* que crezca a lo ancho según columnas */
+  min-width:100%;              /* nunca menos que el panel */
+  table-layout:auto;
 }
-
 th,td{
   border-bottom:1px solid var(--line);
-  padding:10px;
-  text-align:right;
-  white-space:nowrap;            /* evita saltos raros que rompen alturas */
-  background:var(--card);
+  padding:10px; text-align:right; white-space:nowrap; background:var(--card);
 }
-
-/* primera columna (Fecha) fija al hacer scroll lateral */
+/* primera columna (Fecha) fija */
 th:first-child, td:first-child{
-  position:sticky;
-  left:0;
-  z-index:2;
-  text-align:left;
-  box-shadow: 1px 0 0 var(--line); /* separador visual */
+  position:sticky; left:0; z-index:2;
+  text-align:left; box-shadow: 1px 0 0 var(--line);
 }
-
-/* Botón de ocultar/mostrar columna en cabecera */
+/* botón ocultar/mostrar en cabecera */
 th .col-toggle{
-  margin-left:6px;
-  width:22px; height:22px;
+  margin-left:6px; width:22px; height:22px;
   display:inline-flex; align-items:center; justify-content:center;
-  border:1px solid var(--line);
-  border-radius:6px;
-  background:#0e121a;
-  color:var(--muted);
-  font-size:14px; line-height:1;
-  cursor:pointer;
-  user-select:none;
+  border:1px solid var(--line); border-radius:6px;
+  background:#0e121a; color:var(--muted);
+  font-size:14px; line-height:1; cursor:pointer; user-select:none;
 }
 
-/* cuando una columna se oculta por JS, se pone display:none en sus celdas */
-/* En pantallas pequeñas, desactiva sticky para evitar “saltos” que empujan ancho */
+/* ===== Modal (z-index alto para que tape sticky) ===== */
+.modal{ position:fixed; inset:0; display:none; z-index: 9999; }
+.modal[aria-hidden="false"]{ display:block; }
+.modal__backdrop{ position:absolute; inset:0; background:#0008; backdrop-filter:blur(2px); }
+.modal__dialog{
+  position:relative; max-width:420px; margin:6vh auto; background:var(--card);
+  border:1px solid var(--line); border-radius:14px; overflow:hidden; z-index: 10000;
+}
+.modal__header{ padding:12px 14px; border-bottom:1px solid var(--line) }
+.modal__body{ padding:12px 14px }
+.modal__footer{ padding:12px 14px; border-top:1px solid var(--line) }
+
+/* ===== Responsive ===== */
 @media (max-width:480px){
-  th:first-child, td:first-child{ position:static; }
+  th:first-child, td:first-child{ position:sticky; } /* mantenemos sticky en móvil */
   .row input{ width:140px }
   .item input{ flex:0 0 120px }
 }
 
 /* Accesibilidad foco */
-button:focus-visible, input:focus-visible{
-  outline:2px solid var(--accent); outline-offset:2px;
+button:focus-visible, input:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+/* Anti-zoom iOS */
+@supports (-webkit-touch-callout:none){ input, select, textarea{ font-size:16px !important; } }
+/* Tarjetas del dashboard: grid + glass tint */
+.cards{ display:grid; grid-template-columns:1fr; gap:10px; }
+
+.card-mini{
+  position:relative;
+  border:0px solid var(--line);
+  border-radius:12px;             /* borde ligeramente redondeado */
+  padding:12px 12px 10px 12px;
+  background: rgba(16, 21, 32, .55);
+  backdrop-filter: blur(9px);     /* efecto glass */
 }
 
-/* Anti-zoom iOS reforzado en todos los campos */
-@supports (-webkit-touch-callout:none){
-  input, select, textarea{ font-size:16px !important; }
+/* tintado por estado */
+.card-mini.pos{
+  background: rgba(20, 60, 30, .45);
+  box-shadow: 0 6px 24px rgba(0, 128, 0, .12) inset;
+}
+.card-mini.neg{
+  background: rgba(60, 20, 20, .45);
+  box-shadow: 0 6px 24px rgba(255, 0, 0, .12) inset;
+}
+
+.card-mini h4{
+  margin:0; font-size:16px; color:#d0d6e1;
+  padding-right:54px; /* deja hueco a la insignia */
+}
+
+/* insignia arriba-derecha (8px) con % y € */
+.delta-badge{
+  position:absolute; top:8px; right:8px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+  font-size:12px; line-height:1;
+
+  padding:8px 8px; border-radius:8px;
+  background: rgba(0,0,0,.2);
+  border:1px solid var(--line);
+  width: 70px; height:55px;
+}
+.delta-badge .pct{ font-weight:700; }
+.delta-badge.ok{ color:#35c759; }
+.delta-badge.bad{ color:#ff453a; }
+
+.card-mini .now{ margin-top:8px; font-weight:600; font-size:16px; }
+
+/* selector peque */
+#periodo{
+  background:#0e121a; color:#eaeef5; border:1px solid var(--line);
+  border-radius:10px; padding:10px 10px; font-size:16px;margin-bottom: 10px;
 }

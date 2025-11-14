@@ -2,69 +2,100 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"
-  />
-  <title>Mis Cuentas — Fase 1 (Firebase)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
+  <title>Mis Cuentas — Fase 1</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <header>
   <h1>Mis Cuentas</h1>
-  <nav class="tabs">
-    <button class="tab active">Cuentas</button>
-  </nav>
+  <nav class="tabs"><button class="tab active">Cuentas</button></nav>
 </header>
 
 <main>
-  <section class="panel">
-    <div class="row">
-      <label>Fecha</label>
-      <input id="fecha" type="date" />
-    </div>
-
-    <div id="cuentas-wrapper" class="card"></div>
-
-    <div class="row total">
-      <span>TOTAL</span>
-      <strong id="total">0,00 €</strong>
-    </div>
-    <div class="row var">
-      <span>Variación</span>
-      <strong id="variacion">0,00 €</strong>
-    </div>
-    <div class="row var">
-      <span>%Var</span>
-      <strong id="varpct">0,00%</strong>
-    </div>
-
+  <!-- DASHBOARD -->
+  <section class="paneldashboard">
     <div class="actions">
-      <button id="btn-guardar">Guardar registro</button>
-      <button id="btn-limpiar">Limpiar inputs</button>
-    </div>
-  </section>
-
-  <section class="panel">
-    <h2>Historial</h2>
-    <div class="actions">
-      <input id="file-csv" type="file" accept=".csv" />
-      <button id="btn-importar">Importar CSV</button>
-      <button id="btn-exportar">Exportar CSV</button>
-      <button id="btn-add-cuenta">Añadir cuenta</button>
-      <button id="btn-reset">Borrar todo</button>
+      <button id="btn-abrir-modal">Actualizar</button>
+      <select id="periodo">
+        <option value="mes" selected>Mes</option>
+        <option value="semana">Semana</option>
+        <option value="anio">Año</option>
+      </select>
+      <button id="btn-historial">Historial</button>
       <span id="status" style="margin-left:auto;"></span>
     </div>
-    <div id="tabla-historial" class="table"></div>
+    <div id="dashboard" class="cards"></div>
   </section>
+
 </main>
 
-<!-- Firebase (compat, sin módulos y SIN auth) -->
+<!-- MODAL HISTORIAL -->
+<div id="modal-historial" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" id="modal-historial-close"></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-historial-title">
+    <header class="modal__header">
+      <h3 id="modal-historial-title">Historial</h3>
+    </header>
+    <div class="modal__body">
+      <div class="actions">
+        <button id="btn-add-cuenta">Añadir cuenta</button>
+        <button id="btn-reset">Borrar todo</button>
+      </div>
+      <div id="col-restore" class="col-restore"></div>
+      <div id="tabla-historial" class="table"></div>
+    </div>
+    <footer class="modal__footer">
+      <div class="actions">
+        <button id="btn-cerrar-modal-historial" class="btn-secondary">Cerrar</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+
+<!-- MODAL ACTUALIZAR -->
+<div id="modal" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" id="modal-close"></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header class="modal__header">
+      <h3 id="modal-title">Actualizar saldos</h3>
+    </header>
+    <div class="modal__body">
+      <div class="row">
+        <label>Fecha</label>
+        <input id="fecha" type="date" />
+      </div>
+
+      <div id="cuentas-wrapper" class="card"></div>
+
+      <div class="row total">
+        <span>TOTAL</span>
+        <strong id="total">0,00 €</strong>
+      </div>
+      <div class="row var">
+        <span>Variación</span>
+        <strong id="variacion">0,00 €</strong>
+      </div>
+      <div class="row var">
+        <span>%Var</span>
+        <strong id="varpct">0,00%</strong>
+      </div>
+    </div>
+    <footer class="modal__footer">
+      <div class="actions">
+        <button id="btn-guardar">Guardar</button>
+        <button id="btn-limpiar">Limpiar</button>
+        <button id="btn-cerrar-modal" class="btn-secondary">Cancelar</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
-  // Config real
   const firebaseConfig = {
     apiKey: "AIzaSyDNsjnKXfbOFlOh8e_NfFO94-5pfDQdelE",
     authDomain: "finanz-7963a.firebaseapp.com",
@@ -76,7 +107,6 @@
   };
   firebase.initializeApp(firebaseConfig);
 </script>
-
 <script src="app.js"></script>
 </body>
 </html>
