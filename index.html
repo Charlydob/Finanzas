@@ -150,6 +150,31 @@
     </footer>
   </div>
 </div>
+<!-- MODAL ACTUALIZACIÓN INDIVIDUAL -->
+<div id="modal-individual" class="modal-individual" aria-hidden="true">
+  <div class="modal-individual__backdrop" id="modal-individual-backdrop"></div>
+  <div class="modal-individual__dialog" role="dialog" aria-modal="true">
+    <div class="modal-individual__header">
+      <div id="indiv-title" class="modal-individual__title">Actualizar cuenta</div>
+      <button type="button" id="indiv-close" class="modal-individual__close">×</button>
+    </div>
+    <div class="modal-individual__body">
+      <div class="mini-field">
+        <label for="indiv-fecha">Fecha</label>
+        <input id="indiv-fecha" type="date" />
+      </div>
+      <div class="mini-field">
+        <label for="indiv-cantidad">Cantidad</label>
+        <input id="indiv-cantidad" type="text" placeholder="0,00 €" inputmode="decimal" />
+      </div>
+    </div>
+    <div class="modal-individual__footer">
+      <button type="button" id="indiv-cancelar" class="modal-individual__btn">Cancelar</button>
+      <button type="button" id="indiv-guardar" class="modal-individual__btn modal-individual__btn--primary">Guardar</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>

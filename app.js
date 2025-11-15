@@ -93,6 +93,16 @@
   const $btnDelCuenta        = document.getElementById("btn-del-cuenta");
   const $btnActualizarCuenta = document.getElementById("btn-actualizar-cuenta");
 
+  // Modal actualización individual
+  const $modalIndiv          = document.getElementById("modal-individual");
+  const $modalIndivBackdrop  = document.getElementById("modal-individual-backdrop");
+  const $indivTitle          = document.getElementById("indiv-title");
+  const $indivFecha          = document.getElementById("indiv-fecha");
+  const $indivCantidad       = document.getElementById("indiv-cantidad");
+  const $indivBtnGuardar     = document.getElementById("indiv-guardar");
+  const $indivBtnCancelar    = document.getElementById("indiv-cancelar");
+  const $indivBtnClose       = document.getElementById("indiv-close");
+
   function setStatus(txt){ if ($status) $status.textContent = txt || ""; }
 
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
@@ -126,6 +136,43 @@
   if ($comparar) $comparar.addEventListener("change", updateComparativa);
   if ($btnActualizarCuenta) $btnActualizarCuenta.addEventListener("click", onActualizarCuentaIndividual);
 
+  // listeners modal individual
+  if ($indivBtnCancelar) $indivBtnCancelar.addEventListener("click", closeIndivModal);
+  if ($indivBtnClose)    $indivBtnClose.addEventListener("click", closeIndivModal);
+  if ($modalIndivBackdrop) $modalIndivBackdrop.addEventListener("click", closeIndivModal);
+
+  if ($indivBtnGuardar){
+    $indivBtnGuardar.addEventListener("click", () => {
+      const cta = state.cuentaSeleccionada;
+      if (!cta){
+        closeIndivModal();
+        return;
+      }
+
+      const fechaStr = $indivFecha ? $indivFecha.value : "";
+      if (!fechaStr){
+        alert("Pon una fecha.");
+        return;
+      }
+
+      const raw = $indivCantidad ? $indivCantidad.value.trim() : "";
+      if (!raw){
+        alert("Pon una cantidad.");
+        return;
+      }
+
+      const valorNum = esToNumber(raw);
+      if (!Number.isFinite(valorNum)){
+        alert("Cantidad inválida.");
+        return;
+      }
+
+      upsertRegistroCuenta(cta, fechaStr, valorNum);
+      closeIndivModal();
+      buildCuentaDetalle(cta);
+    });
+  }
+
   function openModal(){
     if ($modal) $modal.setAttribute("aria-hidden","false");
   }
@@ -156,6 +203,28 @@
     if ($modalCuenta) $modalCuenta.setAttribute("aria-hidden", "true");
     state.cuentaSeleccionada = null;
     document.querySelectorAll(".row-menu.open").forEach(m => m.classList.remove("open"));
+  }
+
+  function openIndivModal(defaultFecha, defaultValor){
+    if (!$modalIndiv) return;
+
+    if ($indivFecha) {
+      $indivFecha.value = defaultFecha || ymd(new Date());
+    }
+    if ($indivCantidad) {
+      $indivCantidad.value = defaultValor != null && Number.isFinite(defaultValor)
+        ? numberToEs(defaultValor)
+        : "";
+    }
+    if ($indivTitle && state.cuentaSeleccionada) {
+      $indivTitle.textContent = `Actualizar ${state.cuentaSeleccionada}`;
+    }
+
+    $modalIndiv.setAttribute("aria-hidden", "false");
+  }
+
+  function closeIndivModal(){
+    if ($modalIndiv) $modalIndiv.setAttribute("aria-hidden", "true");
   }
 
   function renderInputs(valores){
@@ -1206,28 +1275,27 @@
       return;
     }
 
-    const hoyBase = state.registros.length
-      ? state.registros[state.registros.length-1].fecha
-      : ymd(new Date());
-
-    const fechaStr = prompt(`Fecha para actualizar "${cta}" (AAAA-MM-DD):`, hoyBase);
-    if (!fechaStr) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)){
-      alert("Formato de fecha inválido (usa AAAA-MM-DD).");
-      return;
+    const regs = getSortedRegistros();
+    let last = null;
+    for (let i = regs.length - 1; i >= 0; i--){
+      const r = regs[i];
+      if (r.saldos && Number.isFinite(r.saldos[cta])){
+        last = r;
+        break;
+      }
     }
 
-    const valorStr = prompt(`Nuevo saldo para "${cta}" el ${fechaStr}:`);
-    if (valorStr == null) return;
+    // Fecha por defecto: último dato de esa cuenta, o último registro, o hoy
+    const defaultFecha = last
+      ? last.fecha
+      : (state.registros.length
+          ? state.registros[state.registros.length - 1].fecha
+          : ymd(new Date()));
 
-    const valorNum = esToNumber(valorStr);
-    if (!Number.isFinite(valorNum)){
-      alert("Valor no válido.");
-      return;
-    }
+    // Valor por defecto: último saldo de esa cuenta o 0
+    const defaultValor = last ? last.saldos[cta] : 0;
 
-    upsertRegistroCuenta(cta, fechaStr, valorNum);
-    buildCuentaDetalle(cta);
+    openIndivModal(defaultFecha, defaultValor);
   }
 
   // Crear/actualizar registro sólo para una cuenta
