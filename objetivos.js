@@ -31,6 +31,13 @@
       currency: "EUR",
     }).format(n || 0);
   }
+    function pctToEsLocal(n) {
+    return new Intl.NumberFormat("es-ES", {
+      style: "percent",
+      maximumFractionDigits: 2,
+    }).format(n || 0);
+  }
+
 
   function formatTimeLeft(fechaStr) {
     if (!fechaStr) return "";
@@ -57,6 +64,9 @@
   const $tabButtons = document.querySelectorAll(".tabs .tab");
   const $panelCuentas = document.getElementById("tab-cuentas");
   const $panelObjetivos = document.getElementById("tab-objetivos");
+    const $sumObjetivo = document.getElementById("obj-total-objetivo");
+  const $sumProgreso = document.getElementById("obj-total-progreso");
+
 
   const $list = document.getElementById("objetivos-list");
   const $btnNuevo = document.getElementById("btn-nuevo-objetivo");
@@ -232,6 +242,32 @@
     document.querySelectorAll(".goal-menu").forEach((el) => el.remove());
     $list.innerHTML = "";
 
+    // ------- resumen global -------
+    let totalObjetivo = 0;
+    let totalAhorrado = 0;
+
+    objetivos.forEach((g) => {
+      totalObjetivo += g.objetivo || 0;
+      totalAhorrado += g.ahorrado || 0;
+    });
+
+    const pctGlobal =
+      totalObjetivo > 0 ? Math.max(0, Math.min(1, totalAhorrado / totalObjetivo)) : 0;
+
+    if ($sumObjetivo) {
+      $sumObjetivo.textContent =
+        "Objetivo total: " + numberToEsLocal(totalObjetivo);
+    }
+    if ($sumProgreso) {
+      $sumProgreso.textContent =
+        "Ahorrado: " +
+        numberToEsLocal(totalAhorrado) +
+        " (" +
+        pctToEsLocal(pctGlobal) +
+        ")";
+    }
+
+    // ------- lista de objetivos -------
     if (!objetivos.length) {
       const empty = document.createElement("div");
       empty.className = "muted objetivos-empty";
@@ -374,6 +410,7 @@
       $list.append(card);
     });
   }
+
 
   // ---- Init ----
   (function init() {
