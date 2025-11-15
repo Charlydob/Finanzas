@@ -64,21 +64,28 @@
     <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
   </div>
 
-  <!-- RESUMEN GLOBAL OBJETIVOS + ORIGEN -->
-  <div class="objetivos-summary">
-    <div class="objetivos-summary-main">
-      <span id="obj-total-objetivo">Objetivo total: 0,00 €</span>
-      <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+  <!-- BLOQUE SUPERIOR: CÍRCULO GLOBAL + RESUMEN -->
+  <div class="objetivos-top">
+    <div id="obj-global-circle" class="objetivo-circle objetivo-circle-global">
+      <div id="obj-global-pct" class="objetivo-circle-inner">0%</div>
     </div>
-    <div class="objetivos-summary-source">
-      <button id="btn-origen-cuentas">Cuentas origen</button>
-      <span id="obj-origen-resumen">Origen: todas</span>
-      <span id="obj-capital-disponible">Disponible: 0,00 €</span>
+
+    <div class="objetivos-summary">
+      <div class="objetivos-summary-main">
+        <span id="obj-total-objetivo">Objetivo total: 0,00 €</span>
+        <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+      </div>
+      <div class="objetivos-summary-source">
+        <button id="btn-origen-cuentas">Cuentas origen</button>
+        <span id="obj-origen-resumen">Origen: todas</span>
+        <span id="obj-capital-disponible">Disponible: 0,00 €</span>
+      </div>
     </div>
   </div>
 
   <div id="objetivos-list" class="objetivos-list"></div>
 </section>
+
 
 
 </main>

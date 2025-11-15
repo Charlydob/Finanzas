@@ -80,6 +80,9 @@
   const $sumOrigen   = document.getElementById("obj-origen-resumen");
   const $sumCapital  = document.getElementById("obj-capital-disponible");
 
+  const $globalCircle = document.getElementById("obj-global-circle");
+  const $globalPct    = document.getElementById("obj-global-pct");
+
   // modal objetivo
   const $modalObj         = document.getElementById("modal-objetivo");
   const $modalObjBackdrop = document.getElementById("modal-objetivo-backdrop");
@@ -107,7 +110,6 @@
     !$btnNuevo ||
     !$modalObj
   ) {
-    // si no está el layout, no inicializamos
     return;
   }
 
@@ -123,6 +125,8 @@
       } else {
         $panelCuentas.hidden = true;
         $panelObjetivos.hidden = false;
+        // cada vez que entras en Objetivos, recalculamos reparto y UI
+        renderObjetivos();
       }
     });
   });
@@ -207,7 +211,8 @@
   }
 
   function computeCapitalDisponible() {
-    if (!cuentasOrigen.length) loadCuentasLocal();
+    // siempre recarga de localStorage para ser dinámico
+    loadCuentasLocal();
 
     const last = getLastRegistroCuentas();
     if (!last || !last.saldos) {
@@ -226,6 +231,16 @@
     });
 
     return { capital, activeNames: active };
+  }
+
+  function getTotalsObjetivos() {
+    let totalObjetivo = 0;
+    let totalAhorrado = 0;
+    objetivos.forEach((g) => {
+      totalObjetivo += g.objetivo || 0;
+      totalAhorrado += g.ahorrado || 0;
+    });
+    return { totalObjetivo, totalAhorrado };
   }
 
   // ---- Modal objetivo ----
@@ -312,7 +327,7 @@
 
       saveLocalObjetivos();
       syncCloud();
-      renderObjetivos();
+      renderObjetivos(); // aquí ya se llama reparto automático dentro
       closeModalObjetivo();
     });
   }
@@ -364,83 +379,73 @@
       });
       selectedOrigen = sel;
       saveSelectedOrigen();
-      renderObjetivos();
+      renderObjetivos(); // recalcula con las nuevas cuentas origen
       closeModalOrigen();
     });
   }
 
-  // ---- Sugerencias de aportación ----
-  function computeSugerencias(capitalDisponible) {
-    const map = {};
-    if (capitalDisponible <= 0) {
-      objetivos.forEach((g) => (map[g.id] = 0));
-      return map;
+  // ---- Reparto automático (GREEDY por prioridad temporal) ----
+  // Devuelve true si ha cambiado algo
+  function applyRepartoAutomatico() {
+    const { capital }       = computeCapitalDisponible();
+    const { totalAhorrado } = getTotalsObjetivos();
+
+    let capitalLibre = Math.max(0, capital - totalAhorrado);
+    if (capitalLibre <= 0) return false;
+
+    // candidatos: sólo los que aún tienen pendiente
+    const candidatos = objetivos
+      .map((g) => {
+        const objetivo = g.objetivo || 0;
+        const ahorrado = g.ahorrado || 0;
+        const pendiente = Math.max(objetivo - ahorrado, 0);
+        if (pendiente <= 0) return null;
+
+        let d = daysToTarget(g.fecha);
+        if (d == null) d = 3650;   // sin fecha -> muy poco urgente
+        if (d < 0) d = 0;          // vencido -> máxima urgencia
+
+        return { g, pendiente, days: d };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.days - b.days); // primero los más urgentes
+
+    if (!candidatos.length) return false;
+
+    let changed = false;
+
+    for (const item of candidatos) {
+      if (capitalLibre <= 0) break;
+
+      const maxPosible = Math.min(item.pendiente, capitalLibre);
+      if (maxPosible <= 0) continue;
+
+      const cur = item.g.ahorrado || 0;
+      item.g.ahorrado = cur + maxPosible;
+
+      capitalLibre -= maxPosible;
+      changed = true;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const items = [];
-
-    objetivos.forEach((g) => {
-      const objetivo = g.objetivo || 0;
-      const ahorrado = g.ahorrado || 0;
-      const pendiente = Math.max(objetivo - ahorrado, 0);
-
-      if (pendiente <= 0) {
-        map[g.id] = 0;
-        return;
-      }
-
-      let days = daysToTarget(g.fecha);
-      if (days == null) {
-        // sin fecha -> muy largo plazo
-        days = 365;
-      } else if (days <= 0) {
-        // ya vencido o hoy -> máxima urgencia
-        days = 1;
-      }
-
-      const weight = pendiente / days;
-      if (weight <= 0) {
-        map[g.id] = 0;
-        return;
-      }
-
-      items.push({ id: g.id, pendiente, weight });
-    });
-
-    const totalW = items.reduce((a, it) => a + it.weight, 0);
-    if (totalW <= 0) {
-      items.forEach((it) => (map[it.id] = 0));
-      return map;
-    }
-
-    items.forEach((it) => {
-      let alloc = (capitalDisponible * it.weight) / totalW;
-      if (alloc > it.pendiente) alloc = it.pendiente;
-      map[it.id] = alloc;
-    });
-
-    return map;
+    return changed;
   }
 
   // ---- Render de tarjetas de objetivos ----
   function renderObjetivos() {
     if (!$list) return;
 
+    // siempre, antes de pintar, intentamos redistribuir según situación actual
+    const changed = applyRepartoAutomatico();
+    if (changed) {
+      saveLocalObjetivos();
+      syncCloud();
+    }
+
     // limpiar menús viejos
     document.querySelectorAll(".goal-menu").forEach((el) => el.remove());
     $list.innerHTML = "";
 
-    // resumen global
-    let totalObjetivo = 0;
-    let totalAhorrado = 0;
-
-    objetivos.forEach((g) => {
-      totalObjetivo += g.objetivo || 0;
-      totalAhorrado += g.ahorrado || 0;
-    });
+    const { totalObjetivo, totalAhorrado } = getTotalsObjetivos();
 
     const pctGlobal =
       totalObjetivo > 0
@@ -460,6 +465,13 @@
         ")";
     }
 
+    if ($globalCircle) {
+      $globalCircle.style.setProperty("--pct", pctGlobal * 360 + "deg");
+    }
+    if ($globalPct) {
+      $globalPct.textContent = Math.round(pctGlobal * 100) + "%";
+    }
+
     // capital disponible desde cuentas seleccionadas
     const { capital, activeNames } = computeCapitalDisponible();
     if ($sumCapital) {
@@ -475,9 +487,6 @@
         $sumOrigen.textContent = "Origen: " + activeNames.join(", ");
       }
     }
-
-    // sugerencias de aportación según capital disponible + urgencia
-    const sugerencias = computeSugerencias(capital);
 
     // lista de objetivos
     if (!objetivos.length) {
@@ -496,7 +505,7 @@
       const main = document.createElement("div");
       main.className = "objetivo-main";
 
-      // círculo
+      // círculo individual
       const circle = document.createElement("div");
       circle.className = "objetivo-circle";
       const objetivoNum = goal.objetivo || 0;
@@ -544,13 +553,6 @@
         fEl.textContent = fechaTxt;
         info.append(fEl);
       }
-
-      const sug = sugerencias[goal.id] || 0;
-      const sugEl = document.createElement("div");
-      sugEl.className = "objetivo-sugerido";
-      sugEl.textContent =
-        "Aportación sugerida: " + numberToEsLocal(sug);
-      info.append(sugEl);
 
       main.append(circle, info);
 
