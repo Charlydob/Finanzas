@@ -4,7 +4,6 @@
     if (s == null) return 0;
     if (typeof s === "number") return s;
     s = String(s).replace(/\s/g,"").replace("€","").replace(/\./g,"").replace(",",".");
-
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : 0;
   }
@@ -33,17 +32,12 @@
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
   ];
 
-  function getOrCreateUid(){
-    let id = localStorage.getItem(KEY_UID);
-    if(!id){
-      id = "u_"+Math.random().toString(36).slice(2)+Date.now().toString(36);
-      localStorage.setItem(KEY_UID,id);
-    }
-    return id;
+  function getUid(){
+    return localStorage.getItem(KEY_UID) || null;
   }
 
   const state = {
-    uid      : getOrCreateUid(),
+    uid      : getUid(),
     cuentas  : JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
     registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
     editingIndex: -1,
@@ -51,6 +45,7 @@
   };
 
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
+  let cloudRef   = null;
   function saveHidden(){ localStorage.setItem(KEY_HIDDEN, JSON.stringify([...hiddenCols])); }
 
   // ------- DOM -------
@@ -65,6 +60,12 @@
   const $dashboard    = document.getElementById("dashboard");
   const $totalActual  = document.getElementById("total-actual");
 
+  // login simple
+  const $loginOverlay  = document.getElementById("login-overlay");
+  const $loginInput    = document.getElementById("login-id");
+  const $loginBtn      = document.getElementById("login-btn");
+  const $loginClearBtn = document.getElementById("login-clear");
+
   // modales
   const $modal              = document.getElementById("modal");
   const $btnAbrirModal      = document.getElementById("btn-abrir-modal");
@@ -76,14 +77,14 @@
   const $btnCerrarModalHistorial  = document.getElementById("btn-cerrar-modal-historial");
   const $modalHistorialBackdrop   = document.getElementById("modal-historial-close");
 
-  const $modalCuenta        = document.getElementById("modal-cuenta");
-  const $modalCuentaDialog  = document.querySelector("#modal-cuenta .modal__dialog");
-  const $modalCuentaTitle   = document.getElementById("modal-cuenta-title");
-  const $modalCuentaBackdrop= document.getElementById("modal-cuenta-close");
+  const $modalCuenta         = document.getElementById("modal-cuenta");
+  const $modalCuentaDialog   = document.querySelector("#modal-cuenta .modal__dialog");
+  const $modalCuentaTitle    = document.getElementById("modal-cuenta-title");
+  const $modalCuentaBackdrop = document.getElementById("modal-cuenta-close");
   const $btnCerrarModalCuenta= document.getElementById("btn-cerrar-modal-cuenta");
-  const $cuentaChart        = document.getElementById("cuenta-chart");
-  const $cuentaHistBody     = document.getElementById("cuenta-historial-body");
-  const $cuentaTooltip      = document.getElementById("cuenta-tooltip");
+  const $cuentaChart         = document.getElementById("cuenta-chart");
+  const $cuentaHistBody      = document.getElementById("cuenta-historial-body");
+  const $cuentaTooltip       = document.getElementById("cuenta-tooltip");
 
   const $varTotal      = document.getElementById("var-total");
   const $comparar      = document.getElementById("comparar");
@@ -109,7 +110,7 @@
   document.getElementById("btn-limpiar").addEventListener("click", () => {
     state.editingIndex = -1;
     setGuardarLabel();
-    renderInputs({});   // sin valores (no arrastras el último total)
+    renderInputs({});
   });
 
   const $btnExportar = document.getElementById("btn-exportar");
@@ -136,10 +137,9 @@
   if ($comparar) $comparar.addEventListener("change", updateComparativa);
   if ($btnActualizarCuenta) $btnActualizarCuenta.addEventListener("click", onActualizarCuentaIndividual);
 
-  // listeners modal individual
-  if ($indivBtnCancelar) $indivBtnCancelar.addEventListener("click", closeIndivModal);
-  if ($indivBtnClose)    $indivBtnClose.addEventListener("click", closeIndivModal);
-  if ($modalIndivBackdrop) $modalIndivBackdrop.addEventListener("click", closeIndivModal);
+  if ($modalIndivBackdrop)  $modalIndivBackdrop.addEventListener("click", closeIndivModal);
+  if ($indivBtnCancelar)    $indivBtnCancelar.addEventListener("click", closeIndivModal);
+  if ($indivBtnClose)       $indivBtnClose.addEventListener("click", closeIndivModal);
 
   if ($indivBtnGuardar){
     $indivBtnGuardar.addEventListener("click", () => {
@@ -170,6 +170,83 @@
       upsertRegistroCuenta(cta, fechaStr, valorNum);
       closeIndivModal();
       buildCuentaDetalle(cta);
+    });
+  }
+
+  // ------- Login simple por UID -------
+  function applyUid(newUid){
+    state.uid = newUid;
+    if (!newUid){
+      localStorage.removeItem(KEY_UID);
+    } else {
+      localStorage.setItem(KEY_UID, newUid);
+    }
+
+    if (window.firebase){
+      attachCloudListeners();
+    }
+    renderTabla();
+    renderDashboard();
+
+    if (typeof window !== "undefined" && typeof window.dispatchEvent === "function"){
+      try{
+        window.dispatchEvent(new CustomEvent("finanzas-login",{ detail:{ uid:newUid } }));
+      }catch(e){
+        console.error(e);
+      }
+    }
+  }
+
+  function showLogin(){
+    if ($loginOverlay){
+      $loginOverlay.setAttribute("aria-hidden","false");
+      if ($loginInput){
+        setTimeout(()=> $loginInput.focus(), 0);
+      }
+    }
+  }
+
+  function hideLogin(){
+    if ($loginOverlay){
+      $loginOverlay.setAttribute("aria-hidden","true");
+    }
+  }
+
+  if ($loginBtn){
+    $loginBtn.addEventListener("click", () => {
+      const id = ($loginInput && $loginInput.value || "").trim();
+      if (!id){
+        alert("Introduce un identificador (por ejemplo tu email).");
+        return;
+      }
+      applyUid(id);
+      hideLogin();
+    });
+  }
+
+  if ($loginInput){
+    $loginInput.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter"){
+        ev.preventDefault();
+        if ($loginBtn) $loginBtn.click();
+      }
+    });
+  }
+
+  if ($loginClearBtn){
+    $loginClearBtn.addEventListener("click", () => {
+      localStorage.removeItem(KEY_UID);
+      state.uid = null;
+      if (window.firebase){
+        try{
+          location.reload();
+        }catch(e){
+          console.error(e);
+          showLogin();
+        }
+      } else {
+        showLogin();
+      }
     });
   }
 
@@ -276,7 +353,6 @@
   function leerInputs(){
     const saldos = {};
 
-    // base: último valor conocido de cada cuenta
     let baseSaldos = {};
     if (state.editingIndex >= 0 && state.registros[state.editingIndex]){
       baseSaldos = state.registros[state.editingIndex].saldos || {};
@@ -353,20 +429,22 @@
     closeModal();
 
     try{
-      setStatus("Guardando…");
-      await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas,
-        registros: state.registros,
-        updatedAt: firebase.database.ServerValue.TIMESTAMP
-      });
-      setStatus("✔ Guardado"); setTimeout(()=>setStatus(""),1200);
+      if (window.firebase && state.uid){
+        setStatus("Guardando…");
+        await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+          cuentas: state.cuentas,
+          registros: state.registros,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        setStatus("✔ Guardado"); setTimeout(()=>setStatus(""),1200);
+      }
     }catch(e){
       console.error(e);
       setStatus("✖ Error guardando");
     }
   }
 
-  // ------- Tabla + ocultar columnas (header también) -------
+  // ------- Tabla + ocultar columnas -------
   let currentColsCache = [];
 
   function renderRestoreBar(cols){
@@ -464,13 +542,19 @@
 
       const btnD=document.createElement("button");
       btnD.type="button"; btnD.className="row-btn"; btnD.textContent="🗑"; btnD.title="Borrar";
-      btnD.addEventListener("click",()=>{
+      btnD.addEventListener("click",async()=>{
         if(!confirm(`Borrar el registro de ${r.fecha}?`)) return;
         state.registros.splice(i,1);
         recalcVariaciones(); persistLocal(); renderTabla(); renderDashboard();
-        firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-          cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
-        }).catch(console.error);
+        try{
+          if (window.firebase && state.uid){
+            await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+              cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+          }
+        }catch(e){
+          console.error(e);
+        }
       });
 
       tdA.append(btnE,btnD); tr.append(tdA);
@@ -486,8 +570,7 @@
   }
 
   // ------- Dashboard -------
-
-  function startOfWeek(d){ // ISO: lunes
+  function startOfWeek(d){
     const dt=new Date(d);
     const day=(dt.getDay()+6)%7;
     dt.setDate(dt.getDate()-day);
@@ -517,8 +600,6 @@
     return [...state.registros].sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
   }
 
-  // Calcula variación por cuenta contra el primer registro del periodo
-  // PER CUENTA: usa el registro más antiguo del periodo donde esa cuenta tiene dato
   function computeDeltaByAccount(periodo){
     if(!state.registros.length) return {};
 
@@ -647,7 +728,6 @@
     }
   }
 
-  // diff TOTAL en un rango de fechas [start, end)
   function computeTotalDiffBetween(startInclusive, endExclusive){
     const regs = getSortedRegistros();
     let first = null, last = null;
@@ -668,7 +748,6 @@
     return { hasData:true, diff, first, last };
   }
 
-  // Comparativa: Mes actual vs mes anterior / Semana actual vs semana anterior
   function updateComparativa(){
     if (!$varComparada || !state.registros.length) return;
 
@@ -884,7 +963,6 @@
       });
 
       menu.append(btnEdit, btnDelete);
-
       document.body.append(menu);
 
       dotsBtn.addEventListener("click", (e) => {
@@ -959,24 +1037,10 @@
 
     const points = puntos.map(p => {
       const t = new Date(p.fecha).getTime();
-      return {
-        t,
-        valor: p.valor,
-        x: xScale(t),
-        y: yScale(p.valor)
-      };
+      return { t, valor: p.valor, x: xScale(t), y: yScale(p.valor) };
     });
 
-    canvas._chartData = {
-      points,
-      minX,
-      maxX,
-      minY,
-      maxY,
-      padding,
-      w,
-      h
-    };
+    canvas._chartData = { points, minX, maxX, minY, maxY, padding, w, h };
     canvas._puntos = puntos.slice();
 
     ctx.save();
@@ -1169,18 +1233,20 @@
     state.registros=registros;
     recalcVariaciones();
     persistLocal();
-    renderInputs({});   // sin arrastrar formato de moneda
+    renderInputs({});
     renderTabla();
     renderDashboard();
 
     try{
-      setStatus("Sincronizando…");
-      await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas,
-        registros: state.registros,
-        updatedAt: firebase.database.ServerValue.TIMESTAMP
-      });
-      setStatus("✔ Sincronizado"); setTimeout(()=>setStatus(""),1200);
+      if (window.firebase && state.uid){
+        setStatus("Sincronizando…");
+        await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+          cuentas: state.cuentas,
+          registros: state.registros,
+          updatedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        setStatus("✔ Sincronizado"); setTimeout(()=>setStatus(""),1200);
+      }
     }catch(e){
       console.error(e);
       setStatus("✖ Error sync");
@@ -1193,9 +1259,11 @@
     persistLocal();
     renderTabla();
     renderDashboard();
-    firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-      cuentas: state.cuentas, registros: [], updatedAt: firebase.database.ServerValue.TIMESTAMP
-    }).catch(console.error);
+    if (window.firebase && state.uid){
+      firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+        cuentas: state.cuentas, registros: [], updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }).catch(console.error);
+    }
   }
 
   function addCuenta(){
@@ -1210,10 +1278,11 @@
     renderInputs({});
     renderTabla();
     renderDashboard();
-    firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
+    if (window.firebase && state.uid){
+      firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
+    }
   }
 
-  // Eliminar cuenta (y sus columnas de todos los registros)
   function deleteCuenta(){
     if (!state.cuentas.length){
       alert("No hay cuentas para eliminar.");
@@ -1285,22 +1354,18 @@
       }
     }
 
-    // Fecha por defecto: último dato de esa cuenta, o último registro, o hoy
     const defaultFecha = last
       ? last.fecha
       : (state.registros.length
           ? state.registros[state.registros.length - 1].fecha
           : ymd(new Date()));
 
-    // Valor por defecto: último saldo de esa cuenta o 0
     const defaultValor = last ? last.saldos[cta] : 0;
 
     openIndivModal(defaultFecha, defaultValor);
   }
 
-  // Crear/actualizar registro sólo para una cuenta
   function upsertRegistroCuenta(nombreCuenta, fechaStr, valorNum){
-    // ¿registro existente en esa fecha?
     let idx = state.registros.findIndex(r => r.fecha === fechaStr);
 
     if (idx >= 0){
@@ -1311,7 +1376,6 @@
     } else {
       const targetDate = new Date(fechaStr);
 
-      // último registro anterior a esa fecha
       let lastBefore = null;
       state.registros.forEach(r=>{
         const d = new Date(r.fecha);
@@ -1361,8 +1425,18 @@
 
   // ------- Cloud listener (opcional) -------
   function attachCloudListeners(){
-    const base=firebase.database().ref(`/users/${state.uid}/finanzas/fase1`);
-    base.on("value",snap=>{
+    if (!window.firebase || !state.uid) return;
+
+    if (cloudRef){
+      try{
+        cloudRef.off();
+      }catch(e){
+        console.error(e);
+      }
+    }
+
+    cloudRef = firebase.database().ref(`/users/${state.uid}/finanzas/fase1`);
+    cloudRef.on("value",snap=>{
       const v=snap.val(); if(!v) return;
       if(Array.isArray(v.cuentas)&&v.cuentas.length) state.cuentas=v.cuentas;
       if(Array.isArray(v.registros)) state.registros=v.registros;
@@ -1421,10 +1495,18 @@
   (function init(){
     const today=new Date();
     if ($fecha) $fecha.value=ymd(today);
+
     renderInputs({});
     renderTabla();
     renderDashboard();
-    attachCloudListeners();
     setGuardarLabel();
+
+    const storedUid = getUid();
+    if (storedUid){
+      applyUid(storedUid);
+      hideLogin();
+    } else {
+      showLogin();
+    }
   })();
 })();
