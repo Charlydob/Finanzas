@@ -125,7 +125,7 @@
       } else {
         $panelCuentas.hidden = true;
         $panelObjetivos.hidden = false;
-        // cada vez que entras en Objetivos, recalculamos reparto y UI
+        // al entrar en Objetivos, siempre recalculamos reparto y UI
         renderObjetivos();
       }
     });
@@ -211,7 +211,7 @@
   }
 
   function computeCapitalDisponible() {
-    // siempre recarga de localStorage para ser dinámico
+    // siempre recarga local para ser dinámico
     loadCuentasLocal();
 
     const last = getLastRegistroCuentas();
@@ -327,7 +327,7 @@
 
       saveLocalObjetivos();
       syncCloud();
-      renderObjetivos(); // aquí ya se llama reparto automático dentro
+      renderObjetivos(); // dentro se redistribuye automáticamente
       closeModalObjetivo();
     });
   }
@@ -384,48 +384,105 @@
     });
   }
 
-  // ---- Reparto automático (GREEDY por prioridad temporal) ----
-  // Devuelve true si ha cambiado algo
+  // ---- Reparto automático dinámico con prioridad temporal ----
+  // Recalcula SIEMPRE desde cero 'ahorrado' en función de:
+  // - objetivos (cantidad)
+  // - fecha (urgencia)
+  // - capital disponible actual en cuentas origen
+  // Devuelve true si ha modificado algo.
   function applyRepartoAutomatico() {
-    const { capital }       = computeCapitalDisponible();
-    const { totalAhorrado } = getTotalsObjetivos();
+    const { capital } = computeCapitalDisponible();
 
-    let capitalLibre = Math.max(0, capital - totalAhorrado);
-    if (capitalLibre <= 0) return false;
+    // si no hay capital, ponemos todo a 0
+    if (capital <= 0) {
+      let changed = false;
+      objetivos.forEach((g) => {
+        if (g.ahorrado && Math.abs(g.ahorrado) > 0.005) {
+          g.ahorrado = 0;
+          changed = true;
+        }
+      });
+      return changed;
+    }
 
-    // candidatos: sólo los que aún tienen pendiente
-    const candidatos = objetivos
-      .map((g) => {
-        const objetivo = g.objetivo || 0;
-        const ahorrado = g.ahorrado || 0;
-        const pendiente = Math.max(objetivo - ahorrado, 0);
-        if (pendiente <= 0) return null;
+    // candidatos: sólo objetivos con importe > 0
+    const remaining = [];
+    const alloc = {};
+    const K = 2.5; // cuanto más alto, más prioridad a lo cercano
 
-        let d = daysToTarget(g.fecha);
-        if (d == null) d = 3650;   // sin fecha -> muy poco urgente
-        if (d < 0) d = 0;          // vencido -> máxima urgencia
+    objetivos.forEach((g) => {
+      alloc[g.id] = 0;
+      const objetivo = g.objetivo || 0;
+      if (objetivo <= 0) return;
 
-        return { g, pendiente, days: d };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.days - b.days); // primero los más urgentes
+      let d = daysToTarget(g.fecha);
+      if (d == null) d = 3650; // sin fecha -> bajísima prioridad
+      if (d < 0) d = 0;        // vencido -> máxima prioridad
 
-    if (!candidatos.length) return false;
+      remaining.push({
+        id: g.id,
+        days: d,
+        pending: objetivo
+      });
+    });
+
+    let capitalLeft = capital;
+
+    // bucle proporcional por pesos hasta agotar capital o objetivos
+    while (capitalLeft > 1e-6 && remaining.length) {
+      let totalW = 0;
+      const weights = [];
+
+      for (const r of remaining) {
+        const effDays = r.days + 1; // evita división 0, y hace que 0 días sea lo más urgente
+        const w = r.pending / Math.pow(effDays, K);
+        weights.push(w);
+        totalW += w;
+      }
+
+      if (totalW <= 0) break;
+
+      const newRemaining = [];
+
+      for (let i = 0; i < remaining.length; i++) {
+        const r = remaining[i];
+        const w = weights[i];
+
+        if (w <= 0) {
+          newRemaining.push(r);
+          continue;
+        }
+
+        const desired = capitalLeft * (w / totalW);
+        const give    = Math.min(desired, r.pending, capitalLeft);
+
+        if (give > 1e-6) {
+          alloc[r.id] += give;
+          capitalLeft -= give;
+        }
+
+        const newPending = r.pending - give;
+        if (newPending > 1e-6) {
+          newRemaining.push({
+            id: r.id,
+            days: r.days,
+            pending: newPending
+          });
+        }
+      }
+
+      remaining.length = 0;
+      Array.prototype.push.apply(remaining, newRemaining);
+    }
 
     let changed = false;
-
-    for (const item of candidatos) {
-      if (capitalLibre <= 0) break;
-
-      const maxPosible = Math.min(item.pendiente, capitalLibre);
-      if (maxPosible <= 0) continue;
-
-      const cur = item.g.ahorrado || 0;
-      item.g.ahorrado = cur + maxPosible;
-
-      capitalLibre -= maxPosible;
-      changed = true;
-    }
+    objetivos.forEach((g) => {
+      const nuevo = alloc[g.id] || 0;
+      if (!g.ahorrado || Math.abs(g.ahorrado - nuevo) > 0.005) {
+        g.ahorrado = nuevo;
+        changed = true;
+      }
+    });
 
     return changed;
   }
@@ -434,7 +491,7 @@
   function renderObjetivos() {
     if (!$list) return;
 
-    // siempre, antes de pintar, intentamos redistribuir según situación actual
+    // siempre, antes de pintar, redistribuimos según situación actual
     const changed = applyRepartoAutomatico();
     if (changed) {
       saveLocalObjetivos();
