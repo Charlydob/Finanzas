@@ -825,3 +825,170 @@ input:focus-visible {
     margin-top: 20vh;
   }
 }
+/* ===== Tabs: paneles ===== */
+.tab-panel[hidden] {
+  display: none;
+}
+
+/* ===== OBJETIVOS ===== */
+
+.panel-objetivos {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  padding: 14px;
+  box-shadow: 0 6px 24px #0004;
+}
+
+.objetivos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.objetivos-title {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#btn-nuevo-objetivo {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+
+.objetivos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.objetivos-empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* tarjeta de objetivo */
+.objetivo-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(16, 21, 32, 0.85);
+  border: 1px solid var(--line);
+}
+
+.objetivo-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+}
+
+/* círculo de progreso */
+.objetivo-circle {
+  --pct: 0deg;
+  --color: var(--accent);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: conic-gradient(var(--color) var(--pct), rgba(8, 12, 20, 0.9) 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.objetivo-circle-inner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #101626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.objetivo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.objetivo-nombre {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.objetivo-amounts {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.objetivo-amounts .obj-ahorrado {
+  color: #eaeef5;
+}
+
+.objetivo-fecha {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* botón menú objetivo (tres puntitos) */
+.objetivo-menu-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0e121a;
+  color: #eaeef5;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* menú flotante de objetivos */
+.goal-menu {
+  position: fixed;
+  min-width: 130px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6);
+  padding: 4px 0;
+  z-index: 99999;
+  display: none;
+  flex-direction: column;
+}
+
+.goal-menu.open {
+  display: flex;
+}
+
+.goal-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #eaeef5;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.goal-menu button:hover {
+  background: rgba(255,255,255,0.05);
+}

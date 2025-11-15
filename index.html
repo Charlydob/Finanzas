@@ -13,13 +13,16 @@
 <body>
 <header>
   <h1>Mis Cuentas</h1>
-  <nav class="tabs"><button class="tab active">Cuentas</button></nav>
+  <nav class="tabs">
+    <button class="tab tab-cuentas active" data-tab="cuentas">Cuentas</button>
+    <button class="tab tab-objetivos" data-tab="objetivos">Objetivos</button>
+  </nav>
 </header>
 
-<main>
-  <!-- DASHBOARD -->
-  <section class="paneldashboard">
 
+<main>
+  <!-- TAB CUENTAS -->
+  <section id="tab-cuentas" class="paneldashboard tab-panel">
     <div class="total-header">
       <span></span>
       <div id="total-actual" class="total-actual">0,00 €</div>
@@ -53,7 +56,17 @@
 
     <div id="dashboard" class="cards"></div>
   </section>
+
+  <!-- TAB OBJETIVOS -->
+  <section id="tab-objetivos" class="panel panel-objetivos tab-panel" hidden>
+    <div class="objetivos-header">
+      <div class="objetivos-title">Objetivos de ahorro</div>
+      <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
+    </div>
+    <div id="objetivos-list" class="objetivos-list"></div>
+  </section>
 </main>
+
 
 <!-- MODAL HISTORIAL -->
 <div id="modal-historial" class="modal" aria-hidden="true">
@@ -175,6 +188,47 @@
   </div>
 </div>
 
+<!-- MODAL OBJETIVO -->
+<div id="modal-objetivo" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" id="modal-objetivo-backdrop"></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-objetivo-title">
+    <header class="modal__header">
+      <h3 id="modal-objetivo-title">Nuevo objetivo</h3>
+    </header>
+    <div class="modal__body">
+      <div class="row">
+        <label for="obj-nombre">Nombre</label>
+        <input id="obj-nombre" type="text" />
+      </div>
+
+      <div class="row">
+        <label for="obj-cantidad">Objetivo (€)</label>
+        <input id="obj-cantidad" type="text" inputmode="decimal" placeholder="0,00 €" />
+      </div>
+
+      <div class="row">
+        <label for="obj-ahorrado">Ahorrado (€)</label>
+        <input id="obj-ahorrado" type="text" inputmode="decimal" placeholder="0,00 €" />
+      </div>
+
+      <div class="row">
+        <label for="obj-fecha">Fecha objetivo</label>
+        <input id="obj-fecha" type="date" />
+      </div>
+
+      <div class="row">
+        <label for="obj-color">Color</label>
+        <input id="obj-color" type="color" value="#7cc0ff" />
+      </div>
+    </div>
+    <footer class="modal__footer">
+      <div class="actions">
+        <button id="btn-guardar-objetivo">Guardar</button>
+        <button id="btn-cerrar-modal-objetivo" class="btn-secondary">Cancelar</button>
+      </div>
+    </footer>
+  </div>
+</div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -192,5 +246,7 @@
   firebase.initializeApp(firebaseConfig);
 </script>
 <script src="app.js"></script>
+<script src="objetivos.js"></script>
+
 </body>
 </html>
