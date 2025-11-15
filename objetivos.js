@@ -1,6 +1,9 @@
 (function () {
   const KEY_OBJETIVOS = "mis_cuentas_fase1_objetivos";
-  const KEY_UID = "mis_cuentas_uid";
+  const KEY_UID       = "mis_cuentas_uid";
+  const KEY_DATA      = "mis_cuentas_fase1_data";
+  const KEY_CUENTAS   = "mis_cuentas_fase1_cuentas";
+  const KEY_ORIGEN    = "mis_cuentas_fase1_origen_cuentas";
 
   function getOrCreateUid() {
     let id = localStorage.getItem(KEY_UID);
@@ -12,7 +15,7 @@
   }
   const uid = getOrCreateUid();
 
-  // ---- Helpers numéricos locales (mismo formato que en cuentas) ----
+  // ---- Helpers numéricos locales ----
   function esToNumberLocal(s) {
     if (s == null) return 0;
     if (typeof s === "number") return s;
@@ -31,25 +34,26 @@
       currency: "EUR",
     }).format(n || 0);
   }
-    function pctToEsLocal(n) {
+
+  function pctToEsLocal(n) {
     return new Intl.NumberFormat("es-ES", {
       style: "percent",
       maximumFractionDigits: 2,
     }).format(n || 0);
   }
 
-
-  function formatTimeLeft(fechaStr) {
-    if (!fechaStr) return "";
+  function daysToTarget(fechaStr) {
+    if (!fechaStr) return null;
     const target = new Date(fechaStr + "T00:00:00");
-    if (isNaN(target)) return "";
-
+    if (isNaN(target)) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
+  }
 
-    const diffMs = target - today;
-    const days = Math.round(diffMs / 86400000);
-
+  function formatTimeLeft(fechaStr) {
+    const days = daysToTarget(fechaStr);
+    if (days == null) return "";
     if (days > 0) return `Quedan ${days} día${days !== 1 ? "s" : ""}`;
     if (days === 0) return "Hoy es la fecha objetivo";
     const past = Math.abs(days);
@@ -57,37 +61,57 @@
   }
 
   // ---- Estado ----
-  let objetivos = [];
-  let editingId = null;
+  let objetivos      = [];
+  let editingId      = null;
+  let cuentasOrigen  = [];
+  let registrosCtas  = [];
+  let selectedOrigen = [];
 
   // ---- DOM ----
-  const $tabButtons = document.querySelectorAll(".tabs .tab");
-  const $panelCuentas = document.getElementById("tab-cuentas");
-  const $panelObjetivos = document.getElementById("tab-objetivos");
-    const $sumObjetivo = document.getElementById("obj-total-objetivo");
+  const $tabButtons      = document.querySelectorAll(".tabs .tab");
+  const $panelCuentas    = document.getElementById("tab-cuentas");
+  const $panelObjetivos  = document.getElementById("tab-objetivos");
+
+  const $list        = document.getElementById("objetivos-list");
+  const $btnNuevo    = document.getElementById("btn-nuevo-objetivo");
+
+  const $sumObjetivo = document.getElementById("obj-total-objetivo");
   const $sumProgreso = document.getElementById("obj-total-progreso");
+  const $sumOrigen   = document.getElementById("obj-origen-resumen");
+  const $sumCapital  = document.getElementById("obj-capital-disponible");
 
+  // modal objetivo
+  const $modalObj         = document.getElementById("modal-objetivo");
+  const $modalObjBackdrop = document.getElementById("modal-objetivo-backdrop");
+  const $btnCerrarObj     = document.getElementById("btn-cerrar-modal-objetivo");
+  const $tituloModal      = document.getElementById("modal-objetivo-title");
+  const $nombre           = document.getElementById("obj-nombre");
+  const $cantidad         = document.getElementById("obj-cantidad");
+  const $ahorrado         = document.getElementById("obj-ahorrado");
+  const $fecha            = document.getElementById("obj-fecha");
+  const $color            = document.getElementById("obj-color");
+  const $btnGuardarObj    = document.getElementById("btn-guardar-objetivo");
 
-  const $list = document.getElementById("objetivos-list");
-  const $btnNuevo = document.getElementById("btn-nuevo-objetivo");
+  // modal origen cuentas
+  const $btnOrigen           = document.getElementById("btn-origen-cuentas");
+  const $modalOrigen         = document.getElementById("modal-origen");
+  const $modalOrigenBackdrop = document.getElementById("modal-origen-backdrop");
+  const $origenList          = document.getElementById("origen-cuentas-list");
+  const $btnGuardarOrigen    = document.getElementById("btn-guardar-origen");
+  const $btnCerrarOrigen     = document.getElementById("btn-cerrar-modal-origen");
 
-  const $modal = document.getElementById("modal-objetivo");
-  const $modalBackdrop = document.getElementById("modal-objetivo-backdrop");
-  const $btnCerrar = document.getElementById("btn-cerrar-modal-objetivo");
-  const $tituloModal = document.getElementById("modal-objetivo-title");
-  const $nombre = document.getElementById("obj-nombre");
-  const $cantidad = document.getElementById("obj-cantidad");
-  const $ahorrado = document.getElementById("obj-ahorrado");
-  const $fecha = document.getElementById("obj-fecha");
-  const $color = document.getElementById("obj-color");
-  const $btnGuardar = document.getElementById("btn-guardar-objetivo");
-
-  if (!$panelCuentas || !$panelObjetivos || !$list || !$btnNuevo || !$modal) {
-    // Si no existe algo, no inicializamos (por si se carga en otra página).
+  if (
+    !$panelCuentas ||
+    !$panelObjetivos ||
+    !$list ||
+    !$btnNuevo ||
+    !$modalObj
+  ) {
+    // si no está el layout, no inicializamos
     return;
   }
 
-  // ---- Tabs: Cuentas / Objetivos ----
+  // ---- Tabs Cuentas / Objetivos ----
   $tabButtons.forEach((btn) => {
     const tab = btn.dataset.tab || "cuentas";
     btn.addEventListener("click", () => {
@@ -104,7 +128,7 @@
   });
 
   // ---- LocalStorage / Firebase ----
-  function loadLocal() {
+  function loadLocalObjetivos() {
     try {
       const raw = localStorage.getItem(KEY_OBJETIVOS);
       objetivos = raw ? JSON.parse(raw) || [] : [];
@@ -113,8 +137,36 @@
     }
   }
 
-  function saveLocal() {
+  function saveLocalObjetivos() {
     localStorage.setItem(KEY_OBJETIVOS, JSON.stringify(objetivos));
+  }
+
+  function loadCuentasLocal() {
+    try {
+      const rawC = localStorage.getItem(KEY_CUENTAS);
+      cuentasOrigen = rawC ? JSON.parse(rawC) || [] : [];
+    } catch (e) {
+      cuentasOrigen = [];
+    }
+    try {
+      const rawD = localStorage.getItem(KEY_DATA);
+      registrosCtas = rawD ? JSON.parse(rawD) || [] : [];
+    } catch (e) {
+      registrosCtas = [];
+    }
+  }
+
+  function loadSelectedOrigen() {
+    try {
+      const raw = localStorage.getItem(KEY_ORIGEN);
+      selectedOrigen = raw ? JSON.parse(raw) || [] : [];
+    } catch (e) {
+      selectedOrigen = [];
+    }
+  }
+
+  function saveSelectedOrigen() {
+    localStorage.setItem(KEY_ORIGEN, JSON.stringify(selectedOrigen));
   }
 
   function syncCloud() {
@@ -138,9 +190,42 @@
       const v = snap.val();
       if (!v || !Array.isArray(v.objetivos)) return;
       objetivos = v.objetivos;
-      saveLocal();
+      saveLocalObjetivos();
       renderObjetivos();
     });
+  }
+
+  // ---- capital disponible desde cuentas ----
+  function getLastRegistroCuentas() {
+    if (!registrosCtas.length) return null;
+    let last = registrosCtas[0];
+    for (let i = 1; i < registrosCtas.length; i++) {
+      const r = registrosCtas[i];
+      if (new Date(r.fecha) > new Date(last.fecha)) last = r;
+    }
+    return last;
+  }
+
+  function computeCapitalDisponible() {
+    if (!cuentasOrigen.length) loadCuentasLocal();
+
+    const last = getLastRegistroCuentas();
+    if (!last || !last.saldos) {
+      return { capital: 0, activeNames: [] };
+    }
+
+    const active =
+      selectedOrigen && selectedOrigen.length
+        ? selectedOrigen.filter((n) => cuentasOrigen.includes(n))
+        : cuentasOrigen.slice();
+
+    let capital = 0;
+    active.forEach((name) => {
+      const v = last.saldos[name];
+      if (Number.isFinite(v)) capital += v;
+    });
+
+    return { capital, activeNames: active };
   }
 
   // ---- Modal objetivo ----
@@ -149,19 +234,17 @@
     if ($tituloModal)
       $tituloModal.textContent = goal ? "Editar objetivo" : "Nuevo objetivo";
 
-    $nombre.value = goal?.nombre || "";
-    $cantidad.value =
-      goal && goal.objetivo ? numberToEsLocal(goal.objetivo) : "";
-    $ahorrado.value =
-      goal && goal.ahorrado ? numberToEsLocal(goal.ahorrado) : "";
-    $fecha.value = goal?.fecha || "";
-    $color.value = goal?.color || "#7cc0ff";
+    $nombre.value   = goal?.nombre   || "";
+    $cantidad.value = goal && goal.objetivo ? numberToEsLocal(goal.objetivo) : "";
+    $ahorrado.value = goal && goal.ahorrado ? numberToEsLocal(goal.ahorrado) : "";
+    $fecha.value    = goal?.fecha    || "";
+    $color.value    = goal?.color    || "#7cc0ff";
 
-    $modal.setAttribute("aria-hidden", "false");
+    $modalObj.setAttribute("aria-hidden", "false");
   }
 
   function closeModalObjetivo() {
-    $modal.setAttribute("aria-hidden", "true");
+    $modalObj.setAttribute("aria-hidden", "true");
   }
 
   function setupMoneyInput(inp) {
@@ -186,12 +269,12 @@
   if ($btnNuevo) {
     $btnNuevo.addEventListener("click", () => openModalObjetivo(null));
   }
-  if ($btnCerrar) $btnCerrar.addEventListener("click", closeModalObjetivo);
-  if ($modalBackdrop)
-    $modalBackdrop.addEventListener("click", closeModalObjetivo);
+  if ($btnCerrarObj) $btnCerrarObj.addEventListener("click", closeModalObjetivo);
+  if ($modalObjBackdrop)
+    $modalObjBackdrop.addEventListener("click", closeModalObjetivo);
 
-  if ($btnGuardar) {
-    $btnGuardar.addEventListener("click", () => {
+  if ($btnGuardarObj) {
+    $btnGuardarObj.addEventListener("click", () => {
       const nombre = ($nombre.value || "").trim();
       if (!nombre) {
         alert("Pon un nombre para el objetivo.");
@@ -200,17 +283,17 @@
 
       const objetivoNum = esToNumberLocal($cantidad.value.trim());
       const ahorradoNum = esToNumberLocal($ahorrado.value.trim());
-      const fechaStr = $fecha.value || "";
-      const colorStr = $color.value || "#7cc0ff";
+      const fechaStr    = $fecha.value || "";
+      const colorStr    = $color.value || "#7cc0ff";
 
       if (editingId) {
         const g = objetivos.find((o) => o.id === editingId);
         if (g) {
-          g.nombre = nombre;
+          g.nombre   = nombre;
           g.objetivo = objetivoNum;
           g.ahorrado = ahorradoNum;
-          g.fecha = fechaStr;
-          g.color = colorStr;
+          g.fecha    = fechaStr;
+          g.color    = colorStr;
         }
       } else {
         const id =
@@ -227,11 +310,119 @@
         });
       }
 
-      saveLocal();
+      saveLocalObjetivos();
       syncCloud();
       renderObjetivos();
       closeModalObjetivo();
     });
+  }
+
+  // ---- Modal selección cuentas origen ----
+  function openModalOrigen() {
+    if (!$modalOrigen || !$origenList) return;
+    $origenList.innerHTML = "";
+
+    if (!cuentasOrigen.length) loadCuentasLocal();
+
+    cuentasOrigen.forEach((c) => {
+      const id = "origen-" + c.replace(/\s+/g, "-");
+      const row = document.createElement("label");
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.id = id;
+      chk.value = c;
+      chk.checked =
+        !selectedOrigen.length || selectedOrigen.includes(c);
+
+      const span = document.createElement("span");
+      span.textContent = c;
+      row.append(chk, span);
+      $origenList.append(row);
+    });
+
+    $modalOrigen.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModalOrigen() {
+    if ($modalOrigen)
+      $modalOrigen.setAttribute("aria-hidden", "true");
+  }
+
+  if ($btnOrigen) $btnOrigen.addEventListener("click", openModalOrigen);
+  if ($btnCerrarOrigen)
+    $btnCerrarOrigen.addEventListener("click", closeModalOrigen);
+  if ($modalOrigenBackdrop)
+    $modalOrigenBackdrop.addEventListener("click", closeModalOrigen);
+
+  if ($btnGuardarOrigen) {
+    $btnGuardarOrigen.addEventListener("click", () => {
+      if (!$origenList) return;
+      const checks = $origenList.querySelectorAll("input[type='checkbox']");
+      const sel = [];
+      checks.forEach((chk) => {
+        if (chk.checked) sel.push(chk.value);
+      });
+      selectedOrigen = sel;
+      saveSelectedOrigen();
+      renderObjetivos();
+      closeModalOrigen();
+    });
+  }
+
+  // ---- Sugerencias de aportación ----
+  function computeSugerencias(capitalDisponible) {
+    const map = {};
+    if (capitalDisponible <= 0) {
+      objetivos.forEach((g) => (map[g.id] = 0));
+      return map;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const items = [];
+
+    objetivos.forEach((g) => {
+      const objetivo = g.objetivo || 0;
+      const ahorrado = g.ahorrado || 0;
+      const pendiente = Math.max(objetivo - ahorrado, 0);
+
+      if (pendiente <= 0) {
+        map[g.id] = 0;
+        return;
+      }
+
+      let days = daysToTarget(g.fecha);
+      if (days == null) {
+        // sin fecha -> muy largo plazo
+        days = 365;
+      } else if (days <= 0) {
+        // ya vencido o hoy -> máxima urgencia
+        days = 1;
+      }
+
+      const weight = pendiente / days;
+      if (weight <= 0) {
+        map[g.id] = 0;
+        return;
+      }
+
+      items.push({ id: g.id, pendiente, weight });
+    });
+
+    const totalW = items.reduce((a, it) => a + it.weight, 0);
+    if (totalW <= 0) {
+      items.forEach((it) => (map[it.id] = 0));
+      return map;
+    }
+
+    items.forEach((it) => {
+      let alloc = (capitalDisponible * it.weight) / totalW;
+      if (alloc > it.pendiente) alloc = it.pendiente;
+      map[it.id] = alloc;
+    });
+
+    return map;
   }
 
   // ---- Render de tarjetas de objetivos ----
@@ -242,7 +433,7 @@
     document.querySelectorAll(".goal-menu").forEach((el) => el.remove());
     $list.innerHTML = "";
 
-    // ------- resumen global -------
+    // resumen global
     let totalObjetivo = 0;
     let totalAhorrado = 0;
 
@@ -252,7 +443,9 @@
     });
 
     const pctGlobal =
-      totalObjetivo > 0 ? Math.max(0, Math.min(1, totalAhorrado / totalObjetivo)) : 0;
+      totalObjetivo > 0
+        ? Math.max(0, Math.min(1, totalAhorrado / totalObjetivo))
+        : 0;
 
     if ($sumObjetivo) {
       $sumObjetivo.textContent =
@@ -267,7 +460,26 @@
         ")";
     }
 
-    // ------- lista de objetivos -------
+    // capital disponible desde cuentas seleccionadas
+    const { capital, activeNames } = computeCapitalDisponible();
+    if ($sumCapital) {
+      $sumCapital.textContent =
+        "Disponible: " + numberToEsLocal(capital);
+    }
+    if ($sumOrigen) {
+      if (!activeNames.length) {
+        $sumOrigen.textContent = "Origen: sin datos";
+      } else if (activeNames.length === cuentasOrigen.length || !selectedOrigen.length) {
+        $sumOrigen.textContent = "Origen: todas";
+      } else {
+        $sumOrigen.textContent = "Origen: " + activeNames.join(", ");
+      }
+    }
+
+    // sugerencias de aportación según capital disponible + urgencia
+    const sugerencias = computeSugerencias(capital);
+
+    // lista de objetivos
     if (!objetivos.length) {
       const empty = document.createElement("div");
       empty.className = "muted objetivos-empty";
@@ -333,6 +545,13 @@
         info.append(fEl);
       }
 
+      const sug = sugerencias[goal.id] || 0;
+      const sugEl = document.createElement("div");
+      sugEl.className = "objetivo-sugerido";
+      sugEl.textContent =
+        "Aportación sugerida: " + numberToEsLocal(sug);
+      info.append(sugEl);
+
       main.append(circle, info);
 
       // menú (3 puntitos)
@@ -361,7 +580,7 @@
         )
           return;
         objetivos = objetivos.filter((o) => o.id !== goal.id);
-        saveLocal();
+        saveLocalObjetivos();
         syncCloud();
         renderObjetivos();
       });
@@ -411,10 +630,11 @@
     });
   }
 
-
   // ---- Init ----
   (function init() {
-    loadLocal();
+    loadLocalObjetivos();
+    loadCuentasLocal();
+    loadSelectedOrigen();
     renderObjetivos();
     attachCloud();
   })();

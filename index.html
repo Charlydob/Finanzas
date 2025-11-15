@@ -64,14 +64,22 @@
     <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
   </div>
 
-  <!-- RESUMEN GLOBAL OBJETIVOS -->
+  <!-- RESUMEN GLOBAL OBJETIVOS + ORIGEN -->
   <div class="objetivos-summary">
-    <span id="obj-total-objetivo">Objetivo total: 0,00 €</span>
-    <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+    <div class="objetivos-summary-main">
+      <span id="obj-total-objetivo">Objetivo total: 0,00 €</span>
+      <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+    </div>
+    <div class="objetivos-summary-source">
+      <button id="btn-origen-cuentas">Cuentas origen</button>
+      <span id="obj-origen-resumen">Origen: todas</span>
+      <span id="obj-capital-disponible">Disponible: 0,00 €</span>
+    </div>
   </div>
 
   <div id="objetivos-list" class="objetivos-list"></div>
 </section>
+
 
 </main>
 
@@ -237,6 +245,26 @@
     </footer>
   </div>
 </div>
+<!-- MODAL CUENTAS ORIGEN PARA OBJETIVOS -->
+<div id="modal-origen" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" id="modal-origen-backdrop"></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true">
+    <header class="modal__header">
+      <h3>Seleccionar cuentas origen</h3>
+    </header>
+    <div class="modal__body">
+      <div id="origen-cuentas-list" class="origen-cuentas-list"></div>
+      <p class="origen-note">Si no marcas ninguna, se usarán todas las cuentas.</p>
+    </div>
+    <footer class="modal__footer">
+      <div class="actions">
+        <button id="btn-guardar-origen">Guardar</button>
+        <button id="btn-cerrar-modal-origen" class="btn-secondary">Cancelar</button>
+      </div>
+    </footer>
+  </div>
+</div>
+
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
