@@ -344,6 +344,10 @@ th .col-toggle {
 .modal__header {
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .modal__body {
@@ -354,6 +358,17 @@ th .col-toggle {
 .modal__footer {
   padding: 12px 14px;
   border-top: 1px solid var(--line);
+}
+
+/* Botón header modal (detalle cuenta) */
+.btn-header {
+  background: #0e121a;
+  color: #eaeef5;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 /* Modal detalle cuenta (dimensiones específicas) */
@@ -600,7 +615,6 @@ body.trend-neutral {
   border-radius: 16px;
   border: 0 solid var(--line);
   align-self: flex-end;
-
 }
 
 /* ===== Responsive ===== */
@@ -687,4 +701,127 @@ input:focus-visible {
 
 .row-menu button:hover {
   background: rgba(255,255,255,0.05);
+}
+/* ===== Modal actualización individual (fecha + cantidad) ===== */
+
+.modal-individual {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: none;
+}
+
+.modal-individual[aria-hidden="false"] {
+  display: block;
+}
+
+.modal-individual__backdrop {
+  position: absolute;
+  inset: 0;
+  background: #0009;
+  backdrop-filter: blur(4px);
+}
+
+.modal-individual__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin: 18vh auto 0 auto;
+  padding: 0;
+  background: rgba(16, 21, 32, 0.95);
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.7);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* header mini */
+.modal-individual__header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-individual__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #eaeef5;
+}
+
+.modal-individual__close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* body */
+.modal-individual__body {
+  padding: 12px 14px 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mini-field label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mini-field input {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #0e121a;
+  color: #eaeef5;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+/* footer */
+.modal-individual__footer {
+  padding: 8px 14px 10px 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-individual__btn {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #0e121a;
+  color: #eaeef5;
+}
+
+.modal-individual__btn--primary {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.modal-individual__btn--primary:active {
+  transform: translateY(1px);
+}
+
+/* por si lo usas dentro del modal de cuenta, que quede centrado */
+@media (max-width: 480px) {
+  .modal-individual__dialog {
+    max-width: 300px;
+    margin-top: 20vh;
+  }
 }

@@ -90,13 +90,16 @@
   const $varComparada  = document.getElementById("var-comparada");
   const $body          = document.body;
 
+  const $btnDelCuenta        = document.getElementById("btn-del-cuenta");
+  const $btnActualizarCuenta = document.getElementById("btn-actualizar-cuenta");
+
   function setStatus(txt){ if ($status) $status.textContent = txt || ""; }
 
   document.getElementById("btn-guardar").addEventListener("click", onGuardar);
   document.getElementById("btn-limpiar").addEventListener("click", () => {
     state.editingIndex = -1;
     setGuardarLabel();
-    renderInputs({});
+    renderInputs({});   // sin valores (no arrastras el último total)
   });
 
   const $btnExportar = document.getElementById("btn-exportar");
@@ -107,6 +110,7 @@
 
   document.getElementById("btn-reset").addEventListener("click", borrarTodo);
   document.getElementById("btn-add-cuenta").addEventListener("click", addCuenta);
+  if ($btnDelCuenta) $btnDelCuenta.addEventListener("click", deleteCuenta);
 
   if ($btnAbrirModal) $btnAbrirModal.addEventListener("click", openModal);
   if ($btnCerrarModal) $btnCerrarModal.addEventListener("click", closeModal);
@@ -120,6 +124,7 @@
   if ($modalCuentaBackdrop)  $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
 
   if ($comparar) $comparar.addEventListener("change", updateComparativa);
+  if ($btnActualizarCuenta) $btnActualizarCuenta.addEventListener("click", onActualizarCuentaIndividual);
 
   function openModal(){
     if ($modal) $modal.setAttribute("aria-hidden","false");
@@ -256,7 +261,7 @@
     $btnGuardar.textContent = state.editingIndex>=0 ? "Actualizar" : "Guardar";
   }
 
-  // ------- Guardar -------
+  // ------- Guardar global -------
   async function onGuardar(){
     const fecha = $fecha.value;
     if (!fecha) return alert("Pon una fecha.");
@@ -437,14 +442,6 @@
     if(periodo==="semana") return startOfWeek(refDate);
     if(periodo==="anio")   return startOfYear(refDate);
     return startOfMonth(refDate);
-  }
-
-  function firstRecordFrom(dateStart){
-    const records = [...state.registros];
-    for(const r of records){
-      if(new Date(r.fecha) >= dateStart) return r;
-    }
-    return records[0] || null;
   }
 
   function getSortedRegistros(){
@@ -1103,7 +1100,7 @@
     state.registros=registros;
     recalcVariaciones();
     persistLocal();
-    renderInputs({});
+    renderInputs({});   // sin arrastrar formato de moneda
     renderTabla();
     renderDashboard();
 
@@ -1145,6 +1142,153 @@
     renderTabla();
     renderDashboard();
     firebase.database().ref(`/users/${state.uid}/finanzas/fase1/cuentas`).set(state.cuentas).catch(console.error);
+  }
+
+  // Eliminar cuenta (y sus columnas de todos los registros)
+  function deleteCuenta(){
+    if (!state.cuentas.length){
+      alert("No hay cuentas para eliminar.");
+      return;
+    }
+
+    let msg = "Elige la cuenta a borrar:\n\n";
+    state.cuentas.forEach((c,i)=>{
+      msg += `${i+1}. ${c}\n`;
+    });
+    msg += "\nIntroduce el número de cuenta:";
+
+    const resp = prompt(msg,"");
+    if (resp === null) return;
+    const idx = parseInt(resp,10) - 1;
+    if (Number.isNaN(idx) || idx<0 || idx>=state.cuentas.length){
+      alert("Número no válido.");
+      return;
+    }
+
+    const nombre = state.cuentas[idx];
+    if (!confirm(`¿Seguro que quieres eliminar la cuenta "${nombre}" de todos los registros?`)) return;
+
+    state.cuentas.splice(idx,1);
+    hiddenCols.delete(nombre);
+    saveHidden();
+
+    state.registros.forEach(r=>{
+      if (r.saldos && Object.prototype.hasOwnProperty.call(r.saldos, nombre)){
+        delete r.saldos[nombre];
+      }
+      r.total = Object.values(r.saldos || {}).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
+    });
+
+    recalcVariaciones();
+    persistLocal();
+    renderInputs({});
+    renderTabla();
+    renderDashboard();
+
+    if (state.cuentaSeleccionada === nombre){
+      closeCuentaModal();
+    }
+
+    if (window.firebase && state.uid){
+      firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+        cuentas: state.cuentas,
+        registros: state.registros,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }).catch(console.error);
+    }
+  }
+
+  // ------- Actualizar sólo una cuenta (desde modal detalle) -------
+  function onActualizarCuentaIndividual(){
+    const cta = state.cuentaSeleccionada;
+    if (!cta){
+      alert("Ninguna cuenta seleccionada.");
+      return;
+    }
+
+    const hoyBase = state.registros.length
+      ? state.registros[state.registros.length-1].fecha
+      : ymd(new Date());
+
+    const fechaStr = prompt(`Fecha para actualizar "${cta}" (AAAA-MM-DD):`, hoyBase);
+    if (!fechaStr) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)){
+      alert("Formato de fecha inválido (usa AAAA-MM-DD).");
+      return;
+    }
+
+    const valorStr = prompt(`Nuevo saldo para "${cta}" el ${fechaStr}:`);
+    if (valorStr == null) return;
+
+    const valorNum = esToNumber(valorStr);
+    if (!Number.isFinite(valorNum)){
+      alert("Valor no válido.");
+      return;
+    }
+
+    upsertRegistroCuenta(cta, fechaStr, valorNum);
+    buildCuentaDetalle(cta);
+  }
+
+  // Crear/actualizar registro sólo para una cuenta
+  function upsertRegistroCuenta(nombreCuenta, fechaStr, valorNum){
+    // ¿registro existente en esa fecha?
+    let idx = state.registros.findIndex(r => r.fecha === fechaStr);
+
+    if (idx >= 0){
+      const r = state.registros[idx];
+      if (!r.saldos) r.saldos = {};
+      r.saldos[nombreCuenta] = valorNum;
+      r.total = Object.values(r.saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
+    } else {
+      const targetDate = new Date(fechaStr);
+
+      // último registro anterior a esa fecha
+      let lastBefore = null;
+      state.registros.forEach(r=>{
+        const d = new Date(r.fecha);
+        if (d <= targetDate){
+          if (!lastBefore || d > new Date(lastBefore.fecha)){
+            lastBefore = r;
+          }
+        }
+      });
+
+      const saldos = {};
+      state.cuentas.forEach(cta=>{
+        if (cta === nombreCuenta){
+          saldos[cta] = valorNum;
+        } else {
+          let base = 0;
+          if (lastBefore && lastBefore.saldos && Number.isFinite(lastBefore.saldos[cta])){
+            base = lastBefore.saldos[cta];
+          }
+          saldos[cta] = base;
+        }
+      });
+
+      const total = Object.values(saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
+      state.registros.push({
+        fecha: fechaStr,
+        saldos,
+        total,
+        variacion: 0,
+        varpct: 0
+      });
+    }
+
+    recalcVariaciones();
+    persistLocal();
+    renderTabla();
+    renderDashboard();
+
+    if (window.firebase && state.uid){
+      firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+        cuentas: state.cuentas,
+        registros: state.registros,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }).catch(console.error);
+    }
   }
 
   // ------- Cloud listener (opcional) -------
