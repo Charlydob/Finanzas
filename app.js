@@ -1368,37 +1368,32 @@
   function upsertRegistroCuenta(nombreCuenta, fechaStr, valorNum){
     let idx = state.registros.findIndex(r => r.fecha === fechaStr);
 
-    if (idx >= 0){
-      const r = state.registros[idx];
-      if (!r.saldos) r.saldos = {};
-      r.saldos[nombreCuenta] = valorNum;
-      r.total = Object.values(r.saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
-    } else {
-      const targetDate = new Date(fechaStr);
+if (idx >= 0) {
+  // --------- La fecha ya existe → solo tocar UNA cuenta ---------
+  const r = state.registros[idx];
+  if (!r.saldos) r.saldos = {};
 
-      let lastBefore = null;
-      state.registros.forEach(r=>{
-        const d = new Date(r.fecha);
-        if (d <= targetDate){
-          if (!lastBefore || d > new Date(lastBefore.fecha)){
-            lastBefore = r;
-          }
-        }
-      });
+  r.saldos[nombreCuenta] = valorNum;
 
-      // Solo guardar la cuenta actual, sin tocar las demás
-const saldos = {};
-saldos[nombreCuenta] = valorNum;
+  r.total = Object.values(r.saldos)
+    .reduce((a,b)=> a + (Number.isFinite(b)?b:0), 0);
 
-      const total = Object.values(saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
-      state.registros.push({
-        fecha: fechaStr,
-        saldos,
-        total,
-        variacion: 0,
-        varpct: 0
-      });
-    }
+} else {
+  // --------- Fecha nueva → solo la cuenta editada ---------
+  const saldos = {};
+  saldos[nombreCuenta] = valorNum;
+
+  const total = valorNum;
+
+  state.registros.push({
+    fecha: fechaStr,
+    saldos,
+    total,
+    variacion: 0,
+    varpct: 0
+  });
+}
+
 
     recalcVariaciones();
     persistLocal();
