@@ -430,6 +430,8 @@ function recalcVariaciones(){
 }
 
 
+
+
   function setGuardarLabel(){
     const $btnGuardar = document.getElementById("btn-guardar");
     $btnGuardar.textContent = state.editingIndex>=0 ? "Actualizar" : "Guardar";
