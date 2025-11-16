@@ -26,6 +26,7 @@
   const KEY_CUENTAS= "mis_cuentas_fase1_cuentas";
   const KEY_UID    = "mis_cuentas_uid";
   const KEY_HIDDEN = "mis_cuentas_hidden_cols_by_name";
+const KEY_OBJETIVOS = "mis_cuentas_fase1_objetivos";
 
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
@@ -40,6 +41,7 @@
     uid      : getUid(),
     cuentas  : JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
     registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
+    objetivos: JSON.parse(localStorage.getItem(KEY_OBJETIVOS) || "null") || {},
     editingIndex: -1,
     cuentaSeleccionada: null
   };
@@ -465,6 +467,7 @@ function recalcVariaciones(){
         await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
           cuentas: state.cuentas,
           registros: state.registros,
+            objetivos : state.objetivos,
           updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
         setStatus("✔ Guardado"); setTimeout(()=>setStatus(""),1200);
@@ -632,6 +635,7 @@ function recalcVariaciones(){
           await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
             cuentas: state.cuentas,
             registros: state.registros,
+              objetivos : state.objetivos,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
           });
         }
@@ -1037,6 +1041,7 @@ const regsOrdenados = state.registros
           firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
             cuentas: state.cuentas,
             registros: state.registros,
+              objetivos : state.objetivos,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
           }).catch(console.error);
         }
@@ -1060,6 +1065,7 @@ const regsOrdenados = state.registros
           firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
             cuentas: state.cuentas,
             registros: state.registros,
+              objetivos : state.objetivos,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
           }).catch(console.error);
         }
@@ -1270,6 +1276,7 @@ const regsOrdenados = state.registros
   function persistLocal(){
     localStorage.setItem(KEY_DATA,    JSON.stringify(state.registros));
     localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
+      localStorage.setItem(KEY_OBJETIVOS, JSON.stringify(state.objetivos));
   }
 
   // ------- CSV -------
@@ -1347,6 +1354,7 @@ const regsOrdenados = state.registros
         await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
           cuentas: state.cuentas,
           registros: state.registros,
+            objetivos : state.objetivos,
           updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
         setStatus("✔ Sincronizado"); setTimeout(()=>setStatus(""),1200);
@@ -1365,7 +1373,8 @@ const regsOrdenados = state.registros
     renderDashboard();
     if (window.firebase && state.uid){
       firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-        cuentas: state.cuentas, registros: [], updatedAt: firebase.database.ServerValue.TIMESTAMP
+        cuentas: state.cuentas, registros: [],   objetivos : state.objetivos,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
       }).catch(console.error);
     }
   }
@@ -1435,6 +1444,7 @@ const regsOrdenados = state.registros
       firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
         cuentas: state.cuentas,
         registros: state.registros,
+          objetivos : state.objetivos,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       }).catch(console.error);
     }
@@ -1508,6 +1518,7 @@ if (idx >= 0) {
       firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
         cuentas: state.cuentas,
         registros: state.registros,
+          objetivos : state.objetivos,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       }).catch(console.error);
     }
@@ -1536,13 +1547,20 @@ function attachCloudListeners(){
     if (Array.isArray(v.registros)){
       state.registros = v.registros;
     }
+    if (v.objetivos){                          // ← NUEVO
+      state.objetivos = v.objetivos;           // ← NUEVO
+    }
 
-    recalcVariaciones();      // ← importante para aplicar arrastre tras recibir cloud
+    recalcVariaciones();
 
     persistLocal();
+
     renderInputs({});
     renderTabla();
     renderDashboard();
+    if (typeof renderObjetivos === "function"){ // ← si existe, redibuja objetivos
+      renderObjetivos(state.objetivos);
+    }
 
     setStatus("↻ Actualizado");
     setTimeout(() => setStatus(""), 1000);
