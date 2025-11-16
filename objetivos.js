@@ -510,10 +510,13 @@ function attachCloud() {
 
     // siempre, antes de pintar, redistribuimos según situación actual
     const changed = applyRepartoAutomatico();
-    if (changed) {
-      saveLocalObjetivos();
-      syncCloud();
-    }
+if (changed) {
+  saveLocalObjetivos();
+  // NO guardes en Firebase mientras estás renderizando por un "value"
+  if (!window.__OBJETIVOS_SYNCING__) {
+    syncCloud();
+  }
+}
 
     // limpiar menús viejos
     document.querySelectorAll(".goal-menu").forEach((el) => el.remove());
