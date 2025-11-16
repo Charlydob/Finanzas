@@ -396,12 +396,12 @@ function saveHidden(){
 function recalcVariaciones(){
   if (!state.registros.length) return;
 
-  // Orden cronológico
+  // Ordenamos por fecha por si acaso
   state.registros.sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
-  const cuentas = state.cuentas;
 
-  const lastSaldos = {};
-  let prevTotal = 0;
+  const cuentas   = state.cuentas;
+  const lastSaldos = {};   // último saldo conocido por cuenta
+  let prevTotal   = 0;     // total del registro anterior
 
   for (let i = 0; i < state.registros.length; i++){
     const r = state.registros[i];
@@ -410,18 +410,22 @@ function recalcVariaciones(){
     let total = 0;
 
     cuentas.forEach(cta => {
-      // Si en este registro hay dato para esa cuenta, actualizamos último saldo conocido
+      // Si en ESTE registro hay valor para la cuenta, actualizamos su último saldo
       if (Number.isFinite(r.saldos[cta])) {
         lastSaldos[cta] = r.saldos[cta];
       }
+
+      // Valor que usamos: último saldo conocido (arrastre); si no hay ninguno aún, 0
       const vUsado = Number.isFinite(lastSaldos[cta]) ? lastSaldos[cta] : 0;
       total += vUsado;
     });
 
+    // Total del día calculado con arrastre
     r.total     = total;
     r.variacion = total - prevTotal;
-    r.varpct    = prevTotal !== 0 ? (total - prevTotal)/prevTotal : 0;
-    prevTotal   = total;
+    r.varpct    = prevTotal !== 0 ? (total - prevTotal) / prevTotal : 0;
+
+    prevTotal = total;
   }
 }
 
