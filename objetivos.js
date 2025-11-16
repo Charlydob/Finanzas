@@ -1,19 +1,24 @@
 (function () {
-  const KEY_OBJETIVOS = "mis_cuentas_fase1_objetivos";
-  const KEY_UID       = "mis_cuentas_uid";
-  const KEY_DATA      = "mis_cuentas_fase1_data";
-  const KEY_CUENTAS   = "mis_cuentas_fase1_cuentas";
-  const KEY_ORIGEN    = "mis_cuentas_fase1_origen_cuentas";
+const KEY_OBJETIVOS = "mis_cuentas_fase1_objetivos";
+const KEY_UID       = "mis_cuentas_uid";
+const KEY_DATA      = "mis_cuentas_fase1_data";
+const KEY_CUENTAS   = "mis_cuentas_fase1_cuentas";
+const KEY_ORIGEN    = "mis_cuentas_fase1_origen_cuentas";
 
-  function getOrCreateUid() {
-    let id = localStorage.getItem(KEY_UID);
-    if (!id) {
-      id = "u_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(KEY_UID, id);
-    }
-    return id;
-  }
-  const uid = getOrCreateUid();
+function getUidFromLogin() {
+  // Usa el mismo UID que el login simple de app.js
+  return localStorage.getItem(KEY_UID) || null;
+}
+
+let uid = getUidFromLogin();
+let cloudRef = null;
+
+// Cuando cambias de usuario en el login, actualizamos uid y el listener
+window.addEventListener("finanzas-login", (ev) => {
+  const detail = ev && ev.detail ? ev.detail : {};
+  uid = detail.uid || getUidFromLogin();
+  attachCloud();
+});
 
   // ---- Helpers numéricos locales ----
   function esToNumberLocal(s) {
@@ -185,19 +190,31 @@
       .catch(console.error);
   }
 
-  function attachCloud() {
-    if (!window.firebase || !uid) return;
-    const ref = firebase
-      .database()
-      .ref(`/users/${uid}/finanzas/objetivos`);
-    ref.on("value", (snap) => {
-      const v = snap.val();
-      if (!v || !Array.isArray(v.objetivos)) return;
-      objetivos = v.objetivos;
-      saveLocalObjetivos();
-      renderObjetivos();
-    });
+function attachCloud() {
+  if (!window.firebase || !uid) return;
+
+  // Si ya había un listener de otro usuario, lo quitamos
+  if (cloudRef) {
+    try {
+      cloudRef.off();
+    } catch (e) {
+      console.error(e);
+    }
   }
+
+  cloudRef = firebase
+    .database()
+    .ref(`/users/${uid}/finanzas/objetivos`);
+
+  cloudRef.on("value", (snap) => {
+    const v = snap.val();
+    if (!v || !Array.isArray(v.objetivos)) return;
+    objetivos = v.objetivos;
+    saveLocalObjetivos();
+    renderObjetivos();
+  });
+}
+
 
   // ---- capital disponible desde cuentas ----
   function getLastRegistroCuentas() {
