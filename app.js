@@ -396,37 +396,37 @@ function saveHidden(){
 function recalcVariaciones(){
   if (!state.registros.length) return;
 
-  // Ordenamos por fecha por si acaso
-  state.registros.sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
+  // Siempre ordenados por fecha
+  state.registros.sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
 
-  const cuentas   = state.cuentas;
-  const lastSaldos = {};   // último saldo conocido por cuenta
-  let prevTotal   = 0;     // total del registro anterior
+  const cuentas    = state.cuentas;
+  const lastSaldos = {};  // último saldo conocido por cuenta
+  let prevTotal    = 0;   // total del registro anterior
 
-  for (let i = 0; i < state.registros.length; i++){
-    const r = state.registros[i];
+  state.registros.forEach(r => {
     if (!r.saldos) r.saldos = {};
 
     let total = 0;
 
     cuentas.forEach(cta => {
-      // Si en ESTE registro hay valor para la cuenta, actualizamos su último saldo
-      if (Number.isFinite(r.saldos[cta])) {
-        lastSaldos[cta] = r.saldos[cta];
+      const saldoExp = r.saldos[cta];
+
+      // Si en ESTE registro hay valor explícito, actualizamos último saldo
+      if (Number.isFinite(saldoExp)) {
+        lastSaldos[cta] = saldoExp;
       }
 
-      // Valor que usamos: último saldo conocido (arrastre); si no hay ninguno aún, 0
+      // Para sumar usamos SIEMPRE el último saldo conocido
       const vUsado = Number.isFinite(lastSaldos[cta]) ? lastSaldos[cta] : 0;
       total += vUsado;
     });
 
-    // Total del día calculado con arrastre
     r.total     = total;
     r.variacion = total - prevTotal;
     r.varpct    = prevTotal !== 0 ? (total - prevTotal) / prevTotal : 0;
 
     prevTotal = total;
-  }
+  });
 }
 
 
@@ -526,104 +526,133 @@ function recalcVariaciones(){
   }
 
   function renderTabla(){
-    const cuentas = state.cuentas;
-const cols    = ["Fecha", ...cuentas, "TOTAL", "Variación", "%Var"];
-    currentColsCache = cols.slice();
+  const cuentas = state.cuentas;
+  const cols    = ["Fecha", ...cuentas, "TOTAL", "Variación", "%Var"];
+  currentColsCache = cols.slice();
 
-    const table = document.createElement("table");
-    const thead = document.createElement("thead");
-    const trh   = document.createElement("tr");
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const trh   = document.createElement("tr");
 
-    cols.forEach((c,idx)=>{
-      const th=document.createElement("th");
-      th.className="col-header";
-      if(idx===0) th.classList.add("sticky-col");
-      const title=document.createElement("span");
-      title.className="col-title"; title.textContent=c; th.append(title);
-      if(idx>0){ th.append(makeToggleBtn(c, hiddenCols.has(c))); }
-      trh.append(th);
-    });
-    const thAct=document.createElement("th"); thAct.textContent=""; trh.append(thAct);
-    thead.append(trh);
+  // Cabecera
+  cols.forEach((c,idx)=>{
+    const th = document.createElement("th");
+    th.className = "col-header";
+    if (idx === 0) th.classList.add("sticky-col");
 
-    const tbody=document.createElement("tbody");
-    state.registros.forEach((r,i)=>{
-      const tr=document.createElement("tr");
+    const title = document.createElement("span");
+    title.className = "col-title";
+    title.textContent = c;
+    th.append(title);
 
-      const tdF=document.createElement("td");
-      tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
-
-const lastSaldosRow = {};
-state.registros.forEach((r,i)=>{
-  const tr=document.createElement("tr");
-
-  const tdF=document.createElement("td");
-  tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
-
-  // snapshot por cuenta
-  cuentas.forEach(c=>{
-    const td=document.createElement("td");
-
-    if (!lastSaldosRow._init) lastSaldosRow._init = {};
-    if (Number.isFinite(r.saldos[c])) {
-      lastSaldosRow._init[c] = r.saldos[c];
+    if (idx > 0){
+      th.append(makeToggleBtn(c, hiddenCols.has(c)));
     }
 
-    const vUsado = Number.isFinite(lastSaldosRow._init[c]) ? lastSaldosRow._init[c] : 0;
-    td.textContent = numberToEs(vUsado);
-    tr.append(td);
+    trh.append(th);
   });
+  const thAct = document.createElement("th");
+  thAct.textContent = "";
+  trh.append(thAct);
+  thead.append(trh);
 
-  const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
-  const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
-  const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
+  const tbody = document.createElement("tbody");
 
-  const tdA=document.createElement("td"); tdA.className="actions-cell";
-  // ... (de aquí para abajo de la función deja lo que ya tienes: botones editar/borrar, etc.)
-});
+  // arrastre de saldos para pintar la tabla
+  const lastSaldosRow = {};
 
+  state.registros.forEach((r,i)=>{
+    const tr = document.createElement("tr");
 
-      const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
-      const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
-      const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
+    // Fecha
+    const tdF = document.createElement("td");
+    tdF.className = "sticky-col";
+    tdF.textContent = r.fecha;
+    tr.append(tdF);
 
-      const tdA=document.createElement("td"); tdA.className="actions-cell";
-      const btnE=document.createElement("button");
-      btnE.type="button"; btnE.className="row-btn"; btnE.textContent="✎"; btnE.title="Editar";
-      btnE.addEventListener("click",()=>{
-        state.editingIndex=i; setGuardarLabel();
-        $fecha.value=r.fecha; renderInputs({}); setInputsFromSaldos(r.saldos); openModal();
-      });
+    // Columnas por cuenta con arrastre visual
+    cuentas.forEach(cta=>{
+      const td = document.createElement("td");
+      const saldoExp = r.saldos && r.saldos[cta];
 
-      const btnD=document.createElement("button");
-      btnD.type="button"; btnD.className="row-btn"; btnD.textContent="🗑"; btnD.title="Borrar";
-      btnD.addEventListener("click",async()=>{
-        if(!confirm(`Borrar el registro de ${r.fecha}?`)) return;
-        state.registros.splice(i,1);
-        recalcVariaciones(); persistLocal(); renderTabla(); renderDashboard();
-        try{
-          if (window.firebase && state.uid){
-            await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-              cuentas: state.cuentas, registros: state.registros, updatedAt: firebase.database.ServerValue.TIMESTAMP
-            });
-          }
-        }catch(e){
-          console.error(e);
-        }
-      });
+      if (Number.isFinite(saldoExp)){
+        lastSaldosRow[cta] = saldoExp;
+      }
 
-      tdA.append(btnE,btnD); tr.append(tdA);
-      tbody.append(tr);
+      const vUsado = Number.isFinite(lastSaldosRow[cta]) ? lastSaldosRow[cta] : 0;
+      td.textContent = numberToEs(vUsado);
+      tr.append(td);
     });
 
-    table.append(thead,tbody);
-    $tabla.innerHTML=""; $tabla.append(table);
-    table.style.minWidth = (cols.length*140+120)+"px";
+    // Totales y variaciones (ya calculados en recalcVariaciones)
+    const tdT = document.createElement("td");
+    tdT.textContent = numberToEs(r.total || 0);
+    tr.append(tdT);
 
-    hiddenCols.forEach(name=> setColVisibilityByName(table, cols, name, false));
-    renderRestoreBar(cols);
-  }
+    const tdV = document.createElement("td");
+    tdV.textContent = numberToEs(r.variacion || 0);
+    tr.append(tdV);
 
+    const tdP = document.createElement("td");
+    tdP.textContent = pctToEs(r.varpct || 0);
+    tr.append(tdP);
+
+    // Acciones
+    const tdA = document.createElement("td");
+    tdA.className = "actions-cell";
+
+    const btnE = document.createElement("button");
+    btnE.type = "button";
+    btnE.className = "row-btn";
+    btnE.textContent = "✎";
+    btnE.title = "Editar";
+    btnE.addEventListener("click",()=>{
+      state.editingIndex = i;
+      setGuardarLabel();
+      $fecha.value = r.fecha;
+      renderInputs({});
+      setInputsFromSaldos(r.saldos || {});
+      openModal();
+    });
+
+    const btnD = document.createElement("button");
+    btnD.type = "button";
+    btnD.className = "row-btn";
+    btnD.textContent = "🗑";
+    btnD.title = "Borrar";
+    btnD.addEventListener("click", async ()=>{
+      if (!confirm(`Borrar el registro de ${r.fecha}?`)) return;
+      state.registros.splice(i, 1);
+      recalcVariaciones();
+      persistLocal();
+      renderTabla();
+      renderDashboard();
+      try{
+        if (window.firebase && state.uid){
+          await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
+            cuentas: state.cuentas,
+            registros: state.registros,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+          });
+        }
+      }catch(e){
+        console.error(e);
+      }
+    });
+
+    tdA.append(btnE, btnD);
+    tr.append(tdA);
+    tbody.append(tr);
+  });
+
+  table.append(thead, tbody);
+  $tabla.innerHTML = "";
+  $tabla.append(table);
+  table.style.minWidth = (cols.length * 140 + 120) + "px";
+
+  hiddenCols.forEach(name => setColVisibilityByName(table, cols, name, false));
+  renderRestoreBar(cols);
+}
   // ------- Dashboard -------
   function startOfWeek(d){
     const dt=new Date(d);
@@ -674,10 +703,10 @@ function computeDeltaByAccount(periodo){
   const lastReg  = regs[regs.length - 1];
   const lastDate = new Date(lastReg.fecha);
 
-  // inicio teórico del periodo (1 del mes, inicio de semana o año)
+  // inicio teórico del periodo (mes, semana, año)
   const periodStart = getPeriodoStart(periodo, lastDate);
 
-  // primer registro REAL dentro de ese periodo
+  // primer registro REAL dentro del periodo
   let firstInPeriod = null;
   for (const r of regs){
     const d = new Date(r.fecha);
@@ -687,7 +716,6 @@ function computeDeltaByAccount(periodo){
     }
   }
 
-  // si no hay ningún registro dentro del periodo, no hay variación
   if (!firstInPeriod){
     return {};
   }
@@ -696,9 +724,7 @@ function computeDeltaByAccount(periodo){
 
   const deltas = {};
   state.cuentas.forEach(cta => {
-    // valor actual (último saldo conocido hasta lastDate, con arrastre)
     const nowVal  = getSaldoCuentaEnFecha(cta, regs, lastDate);
-    // valor base: saldo en la fecha del PRIMER registro del periodo (con arrastre)
     const baseVal = getSaldoCuentaEnFecha(cta, regs, baseDate);
 
     const diff = nowVal - baseVal;
