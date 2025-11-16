@@ -1547,9 +1547,6 @@ function attachCloudListeners(){
     if (Array.isArray(v.registros)){
       state.registros = v.registros;
     }
-    if (v.objetivos){                          // ← NUEVO
-      state.objetivos = v.objetivos;           // ← NUEVO
-    }
 
     recalcVariaciones();
 
@@ -1558,9 +1555,7 @@ function attachCloudListeners(){
     renderInputs({});
     renderTabla();
     renderDashboard();
-    if (typeof renderObjetivos === "function"){ // ← si existe, redibuja objetivos
-      renderObjetivos(state.objetivos);
-    }
+  
 
     setStatus("↻ Actualizado");
     setTimeout(() => setStatus(""), 1000);
