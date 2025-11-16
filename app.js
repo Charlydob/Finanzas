@@ -46,7 +46,9 @@
 
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
   let cloudRef   = null;
-  function saveHidden(){ localStorage.setItem(KEY_HIDDEN, JSON.stringify([...hiddenCols])); }
+function saveHidden(){ 
+  localStorage.setItem(KEY_HIDDEN, JSON.stringify([...hiddenCols])); 
+}
 
   // ------- DOM -------
   const $fecha        = document.getElementById("fecha");
@@ -391,15 +393,38 @@
     return {total,variacion,varpct};
   }
 
-  function recalcVariaciones(){
-    state.registros.sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
-    for(let i=0;i<state.registros.length;i++){
-      const prev = i>0 ? state.registros[i-1].total : 0;
-      const t    = state.registros[i].total;
-      state.registros[i].variacion = t - prev;
-      state.registros[i].varpct    = prev !== 0 ? (t - prev)/prev : 0;
-    }
+function recalcVariaciones(){
+  if (!state.registros.length) return;
+
+  // Orden cronológico
+  state.registros.sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
+  const cuentas = state.cuentas;
+
+  const lastSaldos = {};
+  let prevTotal = 0;
+
+  for (let i = 0; i < state.registros.length; i++){
+    const r = state.registros[i];
+    if (!r.saldos) r.saldos = {};
+
+    let total = 0;
+
+    cuentas.forEach(cta => {
+      // Si en este registro hay dato para esa cuenta, actualizamos último saldo conocido
+      if (Number.isFinite(r.saldos[cta])) {
+        lastSaldos[cta] = r.saldos[cta];
+      }
+      const vUsado = Number.isFinite(lastSaldos[cta]) ? lastSaldos[cta] : 0;
+      total += vUsado;
+    });
+
+    r.total     = total;
+    r.variacion = total - prevTotal;
+    r.varpct    = prevTotal !== 0 ? (total - prevTotal)/prevTotal : 0;
+    prevTotal   = total;
   }
+}
+
 
   function setGuardarLabel(){
     const $btnGuardar = document.getElementById("btn-guardar");
@@ -496,7 +521,7 @@
 
   function renderTabla(){
     const cuentas = state.cuentas;
-    const cols    = ["Fecha",...cuentas,"TOTAL","Variación","%Var"];
+const cols    = ["Fecha", ...cuentas, "TOTAL", "Variación", "%Var"];
     currentColsCache = cols.slice();
 
     const table = document.createElement("table");
@@ -522,11 +547,35 @@
       const tdF=document.createElement("td");
       tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
 
-      cuentas.forEach(c=>{
-        const td=document.createElement("td");
-        td.textContent=numberToEs(r.saldos[c]||0);
-        tr.append(td);
-      });
+const lastSaldosRow = {};
+state.registros.forEach((r,i)=>{
+  const tr=document.createElement("tr");
+
+  const tdF=document.createElement("td");
+  tdF.className="sticky-col"; tdF.textContent=r.fecha; tr.append(tdF);
+
+  // snapshot por cuenta
+  cuentas.forEach(c=>{
+    const td=document.createElement("td");
+
+    if (!lastSaldosRow._init) lastSaldosRow._init = {};
+    if (Number.isFinite(r.saldos[c])) {
+      lastSaldosRow._init[c] = r.saldos[c];
+    }
+
+    const vUsado = Number.isFinite(lastSaldosRow._init[c]) ? lastSaldosRow._init[c] : 0;
+    td.textContent = numberToEs(vUsado);
+    tr.append(td);
+  });
+
+  const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
+  const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
+  const tdP=document.createElement("td"); tdP.textContent=pctToEs(r.varpct); tr.append(tdP);
+
+  const tdA=document.createElement("td"); tdA.className="actions-cell";
+  // ... (de aquí para abajo de la función deja lo que ya tienes: botones editar/borrar, etc.)
+});
+
 
       const tdT=document.createElement("td"); tdT.textContent=numberToEs(r.total); tr.append(tdT);
       const tdV=document.createElement("td"); tdV.textContent=numberToEs(r.variacion); tr.append(tdV);
@@ -599,40 +648,41 @@
   function getSortedRegistros(){
     return [...state.registros].sort((a,b)=> new Date(a.fecha)-new Date(b.fecha));
   }
-
-  function computeDeltaByAccount(periodo){
-    if(!state.registros.length) return {};
-
-    const regs = getSortedRegistros();
-    const last = regs[regs.length-1];
-    const start = getPeriodoStart(periodo, new Date(last.fecha));
-
-    const deltas = {};
-    state.cuentas.forEach(cta=>{
-      const nowVal = (last.saldos && Number.isFinite(last.saldos[cta])) ? last.saldos[cta] : 0;
-
-      let baseRecord = null;
-      for (const r of regs){
-        const d = new Date(r.fecha);
-        if (d >= start && r.saldos && Number.isFinite(r.saldos[cta])){
-          baseRecord = r;
-          break;
-        }
-      }
-
-      if (!baseRecord){
-        deltas[cta] = { nowVal, diff: 0, pct: 0 };
-        return;
-      }
-
-      const baseVal = baseRecord.saldos[cta];
-      const diff    = nowVal - baseVal;
-      const pct     = baseVal !== 0 ? (diff / baseVal) : 0;
-      deltas[cta]   = { nowVal, diff, pct };
-    });
-
-    return deltas;
+function getSaldoCuentaEnFecha(cta, regs, targetDate){
+  let val = null;
+  for (let i = 0; i < regs.length; i++){
+    const r = regs[i];
+    const d = new Date(r.fecha);
+    if (d > targetDate) break;
+    if (r.saldos && Number.isFinite(r.saldos[cta])){
+      val = r.saldos[cta];
+    }
   }
+  return Number.isFinite(val) ? val : 0;
+}
+
+function computeDeltaByAccount(periodo){
+  if(!state.registros.length) return {};
+
+  const regs = getSortedRegistros();
+  const lastReg  = regs[regs.length-1];
+  const lastDate = new Date(lastReg.fecha);
+  const start    = getPeriodoStart(periodo, lastDate);
+
+  const deltas = {};
+  state.cuentas.forEach(cta=>{
+    const nowVal  = getSaldoCuentaEnFecha(cta, regs, lastDate);
+    const baseVal = getSaldoCuentaEnFecha(cta, regs, start);
+
+    const diff = nowVal - baseVal;
+    const pct  = baseVal !== 0 ? (diff / baseVal) : 0;
+
+    deltas[cta] = { nowVal, diff, pct };
+  });
+
+  return deltas;
+}
+
 
   function renderDashboard(){
     if ($totalActual){
@@ -818,9 +868,10 @@
 
     document.querySelectorAll(".row-menu").forEach(el => el.remove());
 
-    const regsOrdenados = state.registros
-      .map((r, idx) => ({ ...r, _idx: idx }))
-      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+const regsOrdenados = state.registros
+  .map((r, idx) => ({ ...r, _idx: idx }))
+  .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
 
     const puntos = [];
 
@@ -1410,30 +1461,41 @@ if (idx >= 0) {
   }
 
   // ------- Cloud listener (opcional) -------
-  function attachCloudListeners(){
-    if (!window.firebase || !state.uid) return;
+function attachCloudListeners(){
+  if (!window.firebase || !state.uid) return;
 
-    if (cloudRef){
-      try{
-        cloudRef.off();
-      }catch(e){
-        console.error(e);
-      }
+  if (cloudRef){
+    try{
+      cloudRef.off();
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  cloudRef = firebase.database().ref(`/users/${state.uid}/finanzas/fase1`);
+  cloudRef.on("value", snap => {
+    const v = snap.val();
+    if (!v) return;
+
+    if (Array.isArray(v.cuentas) && v.cuentas.length){
+      state.cuentas = v.cuentas;
+    }
+    if (Array.isArray(v.registros)){
+      state.registros = v.registros;
     }
 
-    cloudRef = firebase.database().ref(`/users/${state.uid}/finanzas/fase1`);
-    cloudRef.on("value",snap=>{
-      const v=snap.val(); if(!v) return;
-      if(Array.isArray(v.cuentas)&&v.cuentas.length) state.cuentas=v.cuentas;
-      if(Array.isArray(v.registros)) state.registros=v.registros;
-      persistLocal();
-      renderInputs({});
-      renderTabla();
-      renderDashboard();
-      setStatus("↻ Actualizado");
-      setTimeout(()=>setStatus(""),1000);
-    });
-  }
+    recalcVariaciones();      // ← importante para aplicar arrastre tras recibir cloud
+
+    persistLocal();
+    renderInputs({});
+    renderTabla();
+    renderDashboard();
+
+    setStatus("↻ Actualizado");
+    setTimeout(() => setStatus(""), 1000);
+  });
+}
+
 
   // interacción tipo Revolut en la gráfica de cuenta
   if ($cuentaChart){
@@ -1481,8 +1543,8 @@ if (idx >= 0) {
   (function init(){
     const today=new Date();
     if ($fecha) $fecha.value=ymd(today);
-
-    renderInputs({});
+  recalcVariaciones();
+      renderInputs({});
     renderTabla();
     renderDashboard();
     setGuardarLabel();
@@ -1496,3 +1558,5 @@ if (idx >= 0) {
     }
   })();
 })();
+
+
