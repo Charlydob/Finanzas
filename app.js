@@ -1386,18 +1386,9 @@
         }
       });
 
-      const saldos = {};
-      state.cuentas.forEach(cta=>{
-        if (cta === nombreCuenta){
-          saldos[cta] = valorNum;
-        } else {
-          let base = 0;
-          if (lastBefore && lastBefore.saldos && Number.isFinite(lastBefore.saldos[cta])){
-            base = lastBefore.saldos[cta];
-          }
-          saldos[cta] = base;
-        }
-      });
+      // Solo guardar la cuenta actual, sin tocar las demás
+const saldos = {};
+saldos[nombreCuenta] = valorNum;
 
       const total = Object.values(saldos).reduce((a,b)=>a+(Number.isFinite(b)?b:0),0);
       state.registros.push({
