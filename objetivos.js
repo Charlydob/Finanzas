@@ -5,9 +5,15 @@
   const KEY_CUENTAS   = "mis_cuentas_fase1_cuentas";
   const KEY_ORIGEN    = "mis_cuentas_fase1_origen_cuentas";
 
-  function getUid() {
-    return localStorage.getItem(KEY_UID) || null;
+  function getOrCreateUid() {
+    let id = localStorage.getItem(KEY_UID);
+    if (!id) {
+      id = "u_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(KEY_UID, id);
+    }
+    return id;
   }
+  const uid = getOrCreateUid();
 
   // ---- Helpers numéricos locales ----
   function esToNumberLocal(s) {
@@ -22,108 +28,115 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  function numberToEsLocal(n, opts) {
-    return new Intl.NumberFormat(
-      "es-ES",
-      opts || { style: "currency", currency: "EUR" }
-    ).format(n);
+  function numberToEsLocal(n) {
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: "EUR",
+    }).format(n || 0);
   }
 
   function pctToEsLocal(n) {
     return new Intl.NumberFormat("es-ES", {
       style: "percent",
       maximumFractionDigits: 2,
-    }).format(n);
+    }).format(n || 0);
   }
 
-  function ymdLocal(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${da}`;
+  function daysToTarget(fechaStr) {
+    if (!fechaStr) return null;
+    const target = new Date(fechaStr + "T00:00:00");
+    if (isNaN(target)) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.round((target - today) / 86400000);
   }
 
-  // ---- Estado local ----
+  function formatTimeLeft(fechaStr) {
+    const days = daysToTarget(fechaStr);
+    if (days == null) return "";
+    if (days > 0) return `Quedan ${days} día${days !== 1 ? "s" : ""}`;
+    if (days === 0) return "Hoy es la fecha objetivo";
+    const past = Math.abs(days);
+    return `Se pasó hace ${past} día${past !== 1 ? "s" : ""}`;
+  }
+
+  // ---- Estado ----
   let objetivos      = [];
   let editingId      = null;
   let cuentasOrigen  = [];
   let registrosCtas  = [];
   let selectedOrigen = [];
-  let objetivosRef   = null;
 
   // ---- DOM ----
-  const $tabObjetivos    = document.getElementById("tab-objetivos");
-  const $panelObjetivos  = document.getElementById("panel-objetivos");
-  const $btnNuevoObjetivo= document.getElementById("btn-nuevo-objetivo");
-  const $listaObjetivos  = document.getElementById("objetivos-lista");
-  const $resumenObjetivos= document.getElementById("objetivos-resumen");
+  const $tabButtons      = document.querySelectorAll(".tabs .tab");
+  const $panelCuentas    = document.getElementById("tab-cuentas");
+  const $panelObjetivos  = document.getElementById("tab-objetivos");
 
-  const $modalObj             = document.getElementById("modal-objetivo");
-  const $modalObjDialog       = $modalObj ? $modalObj.querySelector(".modal__dialog") : null;
-  const $modalObjClose        = document.getElementById("modal-objetivo-close");
-  const $btnCerrarModalObj    = document.getElementById("btn-cerrar-modal-objetivo");
-  const $btnGuardarObjetivo   = document.getElementById("btn-guardar-objetivo");
-  const $btnBorrarObjetivo    = document.getElementById("btn-borrar-objetivo");
+  const $list        = document.getElementById("objetivos-list");
+  const $btnNuevo    = document.getElementById("btn-nuevo-objetivo");
 
-  const $objNombre       = document.getElementById("obj-nombre");
-  const $objObjetivo     = document.getElementById("obj-objetivo");
-  const $objFecha        = document.getElementById("obj-fecha");
-  const $objColor        = document.getElementById("obj-color");
-  const $objOrigenMulti  = document.getElementById("obj-origen");
-  const $objPrioridad    = document.getElementById("obj-prioridad");
+  const $sumObjetivo = document.getElementById("obj-total-objetivo");
+  const $sumProgreso = document.getElementById("obj-total-progreso");
+  const $sumOrigen   = document.getElementById("obj-origen-resumen");
+  const $sumCapital  = document.getElementById("obj-capital-disponible");
 
-  const $totalObjetivos      = document.getElementById("objetivos-total");
-  const $totalObjetivosRest  = document.getElementById("objetivos-restante");
-  const $totalObjetivosPct   = document.getElementById("objetivos-pct");
-  const $ringTotalObjetivos  = document.getElementById("ring-objetivos-total");
+  const $globalCircle = document.getElementById("obj-global-circle");
+  const $globalPct    = document.getElementById("obj-global-pct");
 
-  if ($tabObjetivos && $panelObjetivos) {
-    $tabObjetivos.addEventListener("click", () => {
-      document.querySelectorAll(".tabs button").forEach((b) =>
-        b.classList.remove("active")
-      );
-      document
-        .querySelectorAll(".tab-panel")
-        .forEach((p) => p.setAttribute("aria-hidden", "true"));
+  // modal objetivo
+  const $modalObj         = document.getElementById("modal-objetivo");
+  const $modalObjBackdrop = document.getElementById("modal-objetivo-backdrop");
+  const $btnCerrarObj     = document.getElementById("btn-cerrar-modal-objetivo");
+  const $tituloModal      = document.getElementById("modal-objetivo-title");
+  const $nombre           = document.getElementById("obj-nombre");
+  const $cantidad         = document.getElementById("obj-cantidad");
+  const $ahorrado         = document.getElementById("obj-ahorrado");
+  const $fecha            = document.getElementById("obj-fecha");
+  const $color            = document.getElementById("obj-color");
+  const $btnGuardarObj    = document.getElementById("btn-guardar-objetivo");
 
-      $tabObjetivos.classList.add("active");
-      $panelObjetivos.setAttribute("aria-hidden", "false");
+  // modal origen cuentas
+  const $btnOrigen           = document.getElementById("btn-origen-cuentas");
+  const $modalOrigen         = document.getElementById("modal-origen");
+  const $modalOrigenBackdrop = document.getElementById("modal-origen-backdrop");
+  const $origenList          = document.getElementById("origen-cuentas-list");
+  const $btnGuardarOrigen    = document.getElementById("btn-guardar-origen");
+  const $btnCerrarOrigen     = document.getElementById("btn-cerrar-modal-origen");
+
+  if (
+    !$panelCuentas ||
+    !$panelObjetivos ||
+    !$list ||
+    !$btnNuevo ||
+    !$modalObj
+  ) {
+    return;
+  }
+
+  // ---- Tabs Cuentas / Objetivos ----
+  $tabButtons.forEach((btn) => {
+    const tab = btn.dataset.tab || "cuentas";
+    btn.addEventListener("click", () => {
+      $tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+
+      if (tab === "cuentas") {
+        $panelCuentas.hidden = false;
+        $panelObjetivos.hidden = true;
+      } else {
+        $panelCuentas.hidden = true;
+        $panelObjetivos.hidden = false;
+        // al entrar en Objetivos, siempre recalculamos reparto y UI
+        renderObjetivos();
+      }
     });
-  }
+  });
 
-  if ($btnNuevoObjetivo) {
-    $btnNuevoObjetivo.addEventListener("click", () => {
-      openModalObjetivo(null);
-    });
-  }
-
-  if ($modalObjClose) $modalObjClose.addEventListener("click", closeModalObjetivo);
-  if ($btnCerrarModalObj) $btnCerrarModalObj.addEventListener("click", closeModalObjetivo);
-  if ($modalObj) {
-    const backdrop = document.getElementById("modal-objetivo-backdrop");
-    if (backdrop) backdrop.addEventListener("click", closeModalObjetivo);
-  }
-
-  if ($btnGuardarObjetivo) {
-    $btnGuardarObjetivo.addEventListener("click", onGuardarObjetivo);
-  }
-
-  if ($btnBorrarObjetivo) {
-    $btnBorrarObjetivo.addEventListener("click", onBorrarObjetivo);
-  }
-
+  // ---- LocalStorage / Firebase ----
   function loadLocalObjetivos() {
     try {
       const raw = localStorage.getItem(KEY_OBJETIVOS);
-      if (!raw) {
-        objetivos = [];
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) objetivos = parsed;
-      else objetivos = [];
+      objetivos = raw ? JSON.parse(raw) || [] : [];
     } catch (e) {
-      console.error(e);
       objetivos = [];
     }
   }
@@ -134,37 +147,25 @@
 
   function loadCuentasLocal() {
     try {
-      const cuentas = JSON.parse(localStorage.getItem(KEY_CUENTAS)) || [];
-      cuentasOrigen = cuentas;
+      const rawC = localStorage.getItem(KEY_CUENTAS);
+      cuentasOrigen = rawC ? JSON.parse(rawC) || [] : [];
     } catch (e) {
-      console.error(e);
       cuentasOrigen = [];
     }
-
     try {
-      const regs = JSON.parse(localStorage.getItem(KEY_DATA)) || [];
-      registrosCtas = regs;
+      const rawD = localStorage.getItem(KEY_DATA);
+      registrosCtas = rawD ? JSON.parse(rawD) || [] : [];
     } catch (e) {
-      console.error(e);
       registrosCtas = [];
     }
-
-    renderOrigenMultiSelect();
   }
 
   function loadSelectedOrigen() {
     try {
       const raw = localStorage.getItem(KEY_ORIGEN);
-      if (!raw) {
-        selectedOrigen = [...cuentasOrigen];
-        return;
-      }
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) selectedOrigen = parsed;
-      else selectedOrigen = [...cuentasOrigen];
+      selectedOrigen = raw ? JSON.parse(raw) || [] : [];
     } catch (e) {
-      console.error(e);
-      selectedOrigen = [...cuentasOrigen];
+      selectedOrigen = [];
     }
   }
 
@@ -172,505 +173,7 @@
     localStorage.setItem(KEY_ORIGEN, JSON.stringify(selectedOrigen));
   }
 
-  function renderOrigenMultiSelect() {
-    if (!$objOrigenMulti) return;
-    $objOrigenMulti.innerHTML = "";
-
-    cuentasOrigen.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      opt.textContent = c;
-      if (!selectedOrigen.length || selectedOrigen.includes(c)) {
-        opt.selected = true;
-      }
-      $objOrigenMulti.append(opt);
-    });
-
-    $objOrigenMulti.addEventListener("change", () => {
-      const vals = Array.from($objOrigenMulti.selectedOptions).map((o) => o.value);
-      selectedOrigen = vals;
-      if (!selectedOrigen.length) {
-        selectedOrigen = [...cuentasOrigen];
-      }
-      saveSelectedOrigen();
-      renderObjetivos();
-    });
-  }
-
-  function getTotalDisponible() {
-    if (!registrosCtas.length) return 0;
-    const last = [...registrosCtas].sort(
-      (a, b) => new Date(a.fecha) - new Date(b.fecha)
-    )[registrosCtas.length - 1];
-
-    if (!last || !last.saldos) return 0;
-
-    let total = 0;
-    const origenSet = new Set(selectedOrigen.length ? selectedOrigen : cuentasOrigen);
-
-    Object.keys(last.saldos).forEach((cta) => {
-      if (origenSet.has(cta)) {
-        const v = last.saldos[cta];
-        if (Number.isFinite(v)) total += v;
-      }
-    });
-
-    return total;
-  }
-
-  function getDiasRestantes(fecha) {
-    if (!fecha) return Infinity;
-    const hoy = new Date();
-    const objetivo = new Date(fecha);
-    const diffMs = objetivo.getTime() - hoy.getTime();
-    return diffMs <= 0 ? 1 : Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  }
-
-  function getTotalRestanteYPeso() {
-    const hoy = new Date();
-    let totalRestante = 0;
-
-    const data = objetivos.map((g) => {
-      const objetivo = Number.isFinite(g.objetivo) ? g.objetivo : 0;
-      const aportado = Number.isFinite(g.aportado) ? g.aportado : 0;
-      const restante = Math.max(0, objetivo - aportado);
-      const dias = getDiasRestantes(g.fecha);
-
-      let pesoTiempo = 1;
-      if (dias <= 1) pesoTiempo = 5;
-      else if (dias <= 7) pesoTiempo = 3;
-      else if (dias <= 30) pesoTiempo = 2;
-      else pesoTiempo = 1;
-
-      const prioridad =
-        typeof g.prioridad === "number" && g.prioridad > 0
-          ? g.prioridad
-          : 1;
-
-      const peso = restante * pesoTiempo * prioridad;
-
-      totalRestante += restante;
-
-      return {
-        id: g.id,
-        restante,
-        dias,
-        peso,
-      };
-    });
-
-    return { totalRestante, data };
-  }
-
-  function repartirAutomatico() {
-    const totalDisponible = getTotalDisponible();
-    if (totalDisponible <= 0 || !objetivos.length) {
-      objetivos.forEach((g) => {
-        g.sugerido = 0;
-      });
-      saveLocalObjetivos();
-      renderObjetivos();
-      return;
-    }
-
-    const { totalRestante, data } = getTotalRestanteYPeso();
-    if (totalRestante <= 0) {
-      objetivos.forEach((g) => (g.sugerido = 0));
-      saveLocalObjetivos();
-      renderObjetivos();
-      return;
-    }
-
-    const sumaPesos = data.reduce((acc, d) => acc + d.peso, 0);
-    if (sumaPesos <= 0) {
-      const porObjetivo = totalDisponible / data.length;
-      objetivos.forEach((g) => {
-        g.sugerido = porObjetivo;
-      });
-      saveLocalObjetivos();
-      renderObjetivos();
-      return;
-    }
-
-    let restanteDisponible = totalDisponible;
-
-    const objById = new Map();
-    objetivos.forEach((g) => {
-      objById.set(g.id, g);
-      g.sugerido = 0;
-    });
-
-    const ordenados = [...data].sort((a, b) => a.dias - b.dias);
-
-    ordenados.forEach((info) => {
-      if (restanteDisponible <= 0) return;
-
-      const g = objById.get(info.id);
-      if (!g) return;
-
-      const objetivo = Number.isFinite(g.objetivo) ? g.objetivo : 0;
-      const aportado = Number.isFinite(g.aportado) ? g.aportado : 0;
-      const pendiente = Math.max(0, objetivo - aportado);
-      if (pendiente <= 0) {
-        g.sugerido = 0;
-        return;
-      }
-
-      const proporcion = info.peso / sumaPesos;
-      let asignado = totalDisponible * proporcion;
-
-      if (asignado > pendiente) asignado = pendiente;
-      if (asignado > restanteDisponible) asignado = restanteDisponible;
-
-      g.sugerido = asignado;
-      restanteDisponible -= asignado;
-    });
-
-    saveLocalObjetivos();
-    renderObjetivos();
-  }
-
-  function openModalObjetivo(goal) {
-    if (!$modalObj) return;
-
-    if (!goal) {
-      editingId = null;
-      if ($objNombre) $objNombre.value = "";
-      if ($objObjetivo) $objObjetivo.value = "";
-      if ($objFecha) $objFecha.value = "";
-      if ($objColor) $objColor.value = "#67d5ff";
-      if ($objPrioridad) $objPrioridad.value = "1";
-      if ($objOrigenMulti) {
-        Array.from($objOrigenMulti.options).forEach((opt) => {
-          opt.selected = selectedOrigen.includes(opt.value);
-        });
-      }
-      if ($btnBorrarObjetivo) $btnBorrarObjetivo.style.display = "none";
-    } else {
-      editingId = goal.id;
-      if ($objNombre) $objNombre.value = goal.nombre || "";
-      if ($objObjetivo)
-        $objObjetivo.value =
-          goal.objetivo != null ? String(goal.objetivo) : "";
-      if ($objFecha) $objFecha.value = goal.fecha || "";
-      if ($objColor) $objColor.value = goal.color || "#67d5ff";
-      if ($objPrioridad)
-        $objPrioridad.value =
-          goal.prioridad != null ? String(goal.prioridad) : "1";
-
-      if ($objOrigenMulti && Array.isArray(goal.origen) && goal.origen.length) {
-        Array.from($objOrigenMulti.options).forEach((opt) => {
-          opt.selected = goal.origen.includes(opt.value);
-        });
-      } else if ($objOrigenMulti) {
-        Array.from($objOrigenMulti.options).forEach((opt) => {
-          opt.selected = selectedOrigen.includes(opt.value);
-        });
-      }
-
-      if ($btnBorrarObjetivo) $btnBorrarObjetivo.style.display = "inline-flex";
-    }
-
-    $modalObj.setAttribute("aria-hidden", "false");
-  }
-
-  function closeModalObjetivo() {
-    if ($modalObj) $modalObj.setAttribute("aria-hidden", "true");
-    editingId = null;
-  }
-
-  function onGuardarObjetivo() {
-    if (!$objNombre || !$objObjetivo) return;
-
-    const nombre = $objNombre.value.trim();
-    const objStr = $objObjetivo.value.trim();
-    const fecha  = $objFecha ? $objFecha.value : "";
-    const color  = $objColor ? $objColor.value : "#67d5ff";
-    const prioridad = $objPrioridad ? esToNumberLocal($objPrioridad.value) : 1;
-
-    if (!nombre) {
-      alert("Pon un nombre para el objetivo.");
-      return;
-    }
-
-    const objetivoNum = esToNumberLocal(objStr);
-    if (!Number.isFinite(objetivoNum) || objetivoNum <= 0) {
-      alert("Objetivo inválido.");
-      return;
-    }
-
-    let origenSel = selectedOrigen.slice();
-    if ($objOrigenMulti) {
-      const vals = Array.from($objOrigenMulti.selectedOptions).map(
-        (o) => o.value
-      );
-      if (vals.length) origenSel = vals;
-    }
-
-    if (!origenSel.length) origenSel = [...cuentasOrigen];
-
-    if (editingId) {
-      const idx = objetivos.findIndex((g) => g.id === editingId);
-      if (idx >= 0) {
-        objetivos[idx].nombre   = nombre;
-        objetivos[idx].objetivo = objetivoNum;
-        objetivos[idx].fecha    = fecha || null;
-        objetivos[idx].color    = color;
-        objetivos[idx].origen   = origenSel;
-        objetivos[idx].prioridad= prioridad > 0 ? prioridad : 1;
-      }
-    } else {
-      const nuevo = {
-        id: "obj_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-        nombre,
-        objetivo: objetivoNum,
-        aportado: 0,
-        sugerido: 0,
-        fecha: fecha || null,
-        color,
-        origen: origenSel,
-        prioridad: prioridad > 0 ? prioridad : 1,
-      };
-      objetivos.push(nuevo);
-    }
-
-    saveLocalObjetivos();
-    repartirAutomatico();
-    closeModalObjetivo();
-  }
-
-  function onBorrarObjetivo() {
-    if (!editingId) return;
-    if (!confirm("¿Eliminar este objetivo?")) return;
-    objetivos = objetivos.filter((g) => g.id !== editingId);
-    saveLocalObjetivos();
-    repartirAutomatico();
-    closeModalObjetivo();
-  }
-
-  function renderObjetivos() {
-    if (!$listaObjetivos) return;
-    $listaObjetivos.innerHTML = "";
-
-    renderResumenTotal();
-
-    if (!objetivos.length) {
-      $listaObjetivos.innerHTML =
-        '<div class="muted">Sin objetivos todavía. Pulsa “Nuevo objetivo”.</div>';
-      return;
-    }
-
-    const totalDisponible = getTotalDisponible();
-
-    objetivos.forEach((g) => {
-      const objetivo = Number.isFinite(g.objetivo) ? g.objetivo : 0;
-      const aportado = Number.isFinite(g.aportado) ? g.aportado : 0;
-      const sugerido = Number.isFinite(g.sugerido) ? g.sugerido : 0;
-
-      const restante = Math.max(0, objetivo - aportado);
-      const pct = objetivo > 0 ? aportado / objetivo : 0;
-
-      const dias = getDiasRestantes(g.fecha);
-      const hoy = new Date();
-      const fechaObj = g.fecha ? new Date(g.fecha) : null;
-      const vencido = fechaObj && fechaObj < hoy;
-
-      const card = document.createElement("article");
-      card.className = "objetivo-card";
-
-      if (vencido && restante > 0) {
-        card.classList.add("objetivo-vencido");
-      }
-
-      const header = document.createElement("div");
-      header.className = "objetivo-header";
-
-      const title = document.createElement("h3");
-      title.textContent = g.nombre || "Objetivo sin nombre";
-
-      const badgeFecha = document.createElement("div");
-      badgeFecha.className = "objetivo-fecha";
-
-      if (g.fecha) {
-        badgeFecha.textContent = `${g.fecha} · ${
-          dias <= 0 ? "hoy" : `faltan ${dias} día(s)`
-        }`;
-      } else {
-        badgeFecha.textContent = "Sin fecha límite";
-      }
-
-      header.append(title, badgeFecha);
-
-      const ringWrap = document.createElement("div");
-      ringWrap.className = "objetivo-ring-wrap";
-
-      const ring = document.createElement("div");
-      ring.className = "progress-ring";
-      ring.style.setProperty("--ring-color", g.color || "#67d5ff");
-
-      const pctShow = Math.max(0, Math.min(1, pct));
-      ring.style.setProperty("--ring-progress", String(pctShow));
-
-      const ringInner = document.createElement("div");
-      ringInner.className = "progress-ring__inner";
-      ringInner.textContent = pctToEsLocal(pctShow);
-
-      ring.append(ringInner);
-      ringWrap.append(ring);
-
-      const body = document.createElement("div");
-      body.className = "objetivo-body";
-
-      const rowObjetivo = document.createElement("div");
-      rowObjetivo.className = "objetivo-row";
-      rowObjetivo.innerHTML =
-        `<span>Objetivo</span><span>${numberToEsLocal(objetivo)}</span>`;
-
-      const rowAportado = document.createElement("div");
-      rowAportado.className = "objetivo-row";
-      rowAportado.innerHTML =
-        `<span>Aportado</span><span>${numberToEsLocal(aportado)}</span>`;
-
-      const rowRestante = document.createElement("div");
-      rowRestante.className = "objetivo-row";
-      rowRestante.innerHTML =
-        `<span>Restante</span><span>${numberToEsLocal(restante)}</span>`;
-
-      const rowSugerido = document.createElement("div");
-      rowSugerido.className = "objetivo-row sugerido-row";
-
-      const lblSug = document.createElement("span");
-      lblSug.textContent = "Asignado ahora";
-
-      const contSug = document.createElement("span");
-      const inpSug = document.createElement("input");
-      inpSug.type = "text";
-      inpSug.inputMode = "decimal";
-      inpSug.value = sugerido ? numberToEsLocal(sugerido) : "";
-      inpSug.placeholder = "0,00 €";
-      inpSug.autocomplete = "off";
-
-      inpSug.addEventListener("focus", () => {
-        if (inpSug.value) inpSug.select();
-      });
-
-      inpSug.addEventListener("blur", () => {
-        const raw = inpSug.value.trim();
-        if (!raw) {
-          objetivos = objetivos.map((o) =>
-            o.id === g.id ? { ...o, sugerido: 0 } : o
-          );
-          saveLocalObjetivos();
-          renderObjetivos();
-          return;
-        }
-        const val = esToNumberLocal(raw);
-        const restoDisp = getTotalDisponible();
-        let ajustado = val;
-        if (ajustado < 0) ajustado = 0;
-        if (ajustado > restoDisp) ajustado = restoDisp;
-
-        objetivos = objetivos.map((o) =>
-          o.id === g.id ? { ...o, sugerido: ajustado } : o
-        );
-        saveLocalObjetivos();
-        renderObjetivos();
-      });
-
-      contSug.append(inpSug);
-      rowSugerido.append(lblSug, contSug);
-
-      const rowOrigen = document.createElement("div");
-      rowOrigen.className = "objetivo-row origen-row";
-      const origenTexto = (g.origen && g.origen.length
-        ? g.origen
-        : selectedOrigen
-      ).join(", ");
-      rowOrigen.innerHTML = `<span>Desde</span><span>${origenTexto || "Todas"}</span>`;
-
-      const rowPrioridad = document.createElement("div");
-      rowPrioridad.className = "objetivo-row prioridad-row";
-      rowPrioridad.innerHTML =
-        `<span>Prioridad</span><span>${g.prioridad || 1}</span>`;
-
-      body.append(
-        rowObjetivo,
-        rowAportado,
-        rowRestante,
-        rowSugerido,
-        rowOrigen,
-        rowPrioridad
-      );
-
-      const footer = document.createElement("div");
-      footer.className = "objetivo-footer";
-
-      const infoDisp = document.createElement("div");
-      infoDisp.className = "objetivo-disponible";
-      infoDisp.textContent = `Fondos disponibles: ${numberToEsLocal(
-        totalDisponible
-      )}`;
-
-      footer.append(infoDisp);
-
-      const main = document.createElement("div");
-      main.className = "objetivo-main";
-      main.append(header, ringWrap, body, footer);
-
-      const menuBtn = document.createElement("button");
-      menuBtn.type = "button";
-      menuBtn.className = "dots-btn";
-      menuBtn.textContent = "⋮";
-      menuBtn.title = "Editar objetivo";
-
-      menuBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openModalObjetivo(g);
-      });
-
-      card.addEventListener("click", (e) => {
-        if (e.target === menuBtn) return;
-        openModalObjetivo(goal);
-      });
-
-      card.append(main, menuBtn);
-      $listaObjetivos.append(card);
-    });
-  }
-
-  function renderResumenTotal() {
-    if (!$resumenObjetivos) return;
-
-    const totalObjetivo = objetivos.reduce(
-      (acc, g) => acc + (Number.isFinite(g.objetivo) ? g.objetivo : 0),
-      0
-    );
-    const totalAportado = objetivos.reduce(
-      (acc, g) => acc + (Number.isFinite(g.aportado) ? g.aportado : 0),
-      0
-    );
-
-    const restante = Math.max(0, totalObjetivo - totalAportado);
-    const pct = totalObjetivo > 0 ? totalAportado / totalObjetivo : 0;
-
-    if ($totalObjetivos)
-      $totalObjetivos.textContent = numberToEsLocal(totalObjetivo);
-    if ($totalObjetivosRest)
-      $totalObjetivosRest.textContent = numberToEsLocal(restante);
-    if ($totalObjetivosPct)
-      $totalObjetivosPct.textContent = pctToEsLocal(pct);
-
-    if ($ringTotalObjetivos) {
-      const pctClamp = Math.max(0, Math.min(1, pct));
-      $ringTotalObjetivos.style.setProperty(
-        "--ring-progress",
-        String(pctClamp)
-      );
-    }
-  }
-
   function syncCloud() {
-    const uid = getUid();
     if (!window.firebase || !uid) return;
     firebase
       .database()
@@ -683,26 +186,506 @@
   }
 
   function attachCloud() {
-    const uid = getUid();
     if (!window.firebase || !uid) return;
-
-    if (objetivosRef){
-      try{
-        objetivosRef.off();
-      }catch(e){
-        console.error(e);
-      }
-    }
-
-    objetivosRef = firebase
+    const ref = firebase
       .database()
       .ref(`/users/${uid}/finanzas/objetivos`);
-    objetivosRef.on("value", (snap) => {
+    ref.on("value", (snap) => {
       const v = snap.val();
       if (!v || !Array.isArray(v.objetivos)) return;
       objetivos = v.objetivos;
       saveLocalObjetivos();
       renderObjetivos();
+    });
+  }
+
+  // ---- capital disponible desde cuentas ----
+  function getLastRegistroCuentas() {
+    if (!registrosCtas.length) return null;
+    let last = registrosCtas[0];
+    for (let i = 1; i < registrosCtas.length; i++) {
+      const r = registrosCtas[i];
+      if (new Date(r.fecha) > new Date(last.fecha)) last = r;
+    }
+    return last;
+  }
+
+  function computeCapitalDisponible() {
+    // siempre recarga local para ser dinámico
+    loadCuentasLocal();
+
+    const last = getLastRegistroCuentas();
+    if (!last || !last.saldos) {
+      return { capital: 0, activeNames: [] };
+    }
+
+    const active =
+      selectedOrigen && selectedOrigen.length
+        ? selectedOrigen.filter((n) => cuentasOrigen.includes(n))
+        : cuentasOrigen.slice();
+
+    let capital = 0;
+    active.forEach((name) => {
+      const v = last.saldos[name];
+      if (Number.isFinite(v)) capital += v;
+    });
+
+    return { capital, activeNames: active };
+  }
+
+  function getTotalsObjetivos() {
+    let totalObjetivo = 0;
+    let totalAhorrado = 0;
+    objetivos.forEach((g) => {
+      totalObjetivo += g.objetivo || 0;
+      totalAhorrado += g.ahorrado || 0;
+    });
+    return { totalObjetivo, totalAhorrado };
+  }
+
+  // ---- Modal objetivo ----
+  function openModalObjetivo(goal) {
+    editingId = goal ? goal.id : null;
+    if ($tituloModal)
+      $tituloModal.textContent = goal ? "Editar objetivo" : "Nuevo objetivo";
+
+    $nombre.value   = goal?.nombre   || "";
+    $cantidad.value = goal && goal.objetivo ? numberToEsLocal(goal.objetivo) : "";
+    $ahorrado.value = goal && goal.ahorrado ? numberToEsLocal(goal.ahorrado) : "";
+    $fecha.value    = goal?.fecha    || "";
+    $color.value    = goal?.color    || "#7cc0ff";
+
+    $modalObj.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModalObjetivo() {
+    $modalObj.setAttribute("aria-hidden", "true");
+  }
+
+  function setupMoneyInput(inp) {
+    if (!inp) return;
+    inp.addEventListener("focus", () => {
+      if (inp.value) inp.select();
+    });
+    inp.addEventListener("blur", () => {
+      const raw = inp.value.trim();
+      if (!raw) {
+        inp.value = "";
+        return;
+      }
+      const num = esToNumberLocal(raw);
+      inp.value = numberToEsLocal(num);
+    });
+  }
+
+  setupMoneyInput($cantidad);
+  setupMoneyInput($ahorrado);
+
+  if ($btnNuevo) {
+    $btnNuevo.addEventListener("click", () => openModalObjetivo(null));
+  }
+  if ($btnCerrarObj) $btnCerrarObj.addEventListener("click", closeModalObjetivo);
+  if ($modalObjBackdrop)
+    $modalObjBackdrop.addEventListener("click", closeModalObjetivo);
+
+  if ($btnGuardarObj) {
+    $btnGuardarObj.addEventListener("click", () => {
+      const nombre = ($nombre.value || "").trim();
+      if (!nombre) {
+        alert("Pon un nombre para el objetivo.");
+        return;
+      }
+
+      const objetivoNum = esToNumberLocal($cantidad.value.trim());
+      const ahorradoNum = esToNumberLocal($ahorrado.value.trim());
+      const fechaStr    = $fecha.value || "";
+      const colorStr    = $color.value || "#7cc0ff";
+
+      if (editingId) {
+        const g = objetivos.find((o) => o.id === editingId);
+        if (g) {
+          g.nombre   = nombre;
+          g.objetivo = objetivoNum;
+          g.ahorrado = ahorradoNum;
+          g.fecha    = fechaStr;
+          g.color    = colorStr;
+        }
+      } else {
+        const id =
+          "g_" +
+          Date.now().toString(36) +
+          Math.random().toString(36).slice(2, 7);
+        objetivos.push({
+          id,
+          nombre,
+          objetivo: objetivoNum,
+          ahorrado: ahorradoNum,
+          fecha: fechaStr,
+          color: colorStr,
+        });
+      }
+
+      saveLocalObjetivos();
+      syncCloud();
+      renderObjetivos(); // dentro se redistribuye automáticamente
+      closeModalObjetivo();
+    });
+  }
+
+  // ---- Modal selección cuentas origen ----
+  function openModalOrigen() {
+    if (!$modalOrigen || !$origenList) return;
+    $origenList.innerHTML = "";
+
+    if (!cuentasOrigen.length) loadCuentasLocal();
+
+    cuentasOrigen.forEach((c) => {
+      const id = "origen-" + c.replace(/\s+/g, "-");
+      const row = document.createElement("label");
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.id = id;
+      chk.value = c;
+      chk.checked =
+        !selectedOrigen.length || selectedOrigen.includes(c);
+
+      const span = document.createElement("span");
+      span.textContent = c;
+      row.append(chk, span);
+      $origenList.append(row);
+    });
+
+    $modalOrigen.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModalOrigen() {
+    if ($modalOrigen)
+      $modalOrigen.setAttribute("aria-hidden", "true");
+  }
+
+  if ($btnOrigen) $btnOrigen.addEventListener("click", openModalOrigen);
+  if ($btnCerrarOrigen)
+    $btnCerrarOrigen.addEventListener("click", closeModalOrigen);
+  if ($modalOrigenBackdrop)
+    $modalOrigenBackdrop.addEventListener("click", closeModalOrigen);
+
+  if ($btnGuardarOrigen) {
+    $btnGuardarOrigen.addEventListener("click", () => {
+      if (!$origenList) return;
+      const checks = $origenList.querySelectorAll("input[type='checkbox']");
+      const sel = [];
+      checks.forEach((chk) => {
+        if (chk.checked) sel.push(chk.value);
+      });
+      selectedOrigen = sel;
+      saveSelectedOrigen();
+      renderObjetivos(); // recalcula con las nuevas cuentas origen
+      closeModalOrigen();
+    });
+  }
+
+  // ---- Reparto automático dinámico con prioridad temporal ----
+  // Recalcula SIEMPRE desde cero 'ahorrado' en función de:
+  // - objetivos (cantidad)
+  // - fecha (urgencia)
+  // - capital disponible actual en cuentas origen
+  // Devuelve true si ha modificado algo.
+  function applyRepartoAutomatico() {
+    const { capital } = computeCapitalDisponible();
+
+    // si no hay capital, ponemos todo a 0
+    if (capital <= 0) {
+      let changed = false;
+      objetivos.forEach((g) => {
+        if (g.ahorrado && Math.abs(g.ahorrado) > 0.005) {
+          g.ahorrado = 0;
+          changed = true;
+        }
+      });
+      return changed;
+    }
+
+    // candidatos: sólo objetivos con importe > 0
+    const remaining = [];
+    const alloc = {};
+    const K = 2.5; // cuanto más alto, más prioridad a lo cercano
+
+    objetivos.forEach((g) => {
+      alloc[g.id] = 0;
+      const objetivo = g.objetivo || 0;
+      if (objetivo <= 0) return;
+
+      let d = daysToTarget(g.fecha);
+      if (d == null) d = 3650; // sin fecha -> bajísima prioridad
+      if (d < 0) d = 0;        // vencido -> máxima prioridad
+
+      remaining.push({
+        id: g.id,
+        days: d,
+        pending: objetivo
+      });
+    });
+
+    let capitalLeft = capital;
+
+    // bucle proporcional por pesos hasta agotar capital o objetivos
+    while (capitalLeft > 1e-6 && remaining.length) {
+      let totalW = 0;
+      const weights = [];
+
+      for (const r of remaining) {
+        const effDays = r.days + 1; // evita división 0, y hace que 0 días sea lo más urgente
+        const w = r.pending / Math.pow(effDays, K);
+        weights.push(w);
+        totalW += w;
+      }
+
+      if (totalW <= 0) break;
+
+      const newRemaining = [];
+
+      for (let i = 0; i < remaining.length; i++) {
+        const r = remaining[i];
+        const w = weights[i];
+
+        if (w <= 0) {
+          newRemaining.push(r);
+          continue;
+        }
+
+        const desired = capitalLeft * (w / totalW);
+        const give    = Math.min(desired, r.pending, capitalLeft);
+
+        if (give > 1e-6) {
+          alloc[r.id] += give;
+          capitalLeft -= give;
+        }
+
+        const newPending = r.pending - give;
+        if (newPending > 1e-6) {
+          newRemaining.push({
+            id: r.id,
+            days: r.days,
+            pending: newPending
+          });
+        }
+      }
+
+      remaining.length = 0;
+      Array.prototype.push.apply(remaining, newRemaining);
+    }
+
+    let changed = false;
+    objetivos.forEach((g) => {
+      const nuevo = alloc[g.id] || 0;
+      if (!g.ahorrado || Math.abs(g.ahorrado - nuevo) > 0.005) {
+        g.ahorrado = nuevo;
+        changed = true;
+      }
+    });
+
+    return changed;
+  }
+
+  // ---- Render de tarjetas de objetivos ----
+  function renderObjetivos() {
+    if (!$list) return;
+
+    // siempre, antes de pintar, redistribuimos según situación actual
+    const changed = applyRepartoAutomatico();
+    if (changed) {
+      saveLocalObjetivos();
+      syncCloud();
+    }
+
+    // limpiar menús viejos
+    document.querySelectorAll(".goal-menu").forEach((el) => el.remove());
+    $list.innerHTML = "";
+
+    const { totalObjetivo, totalAhorrado } = getTotalsObjetivos();
+
+    const pctGlobal =
+      totalObjetivo > 0
+        ? Math.max(0, Math.min(1, totalAhorrado / totalObjetivo))
+        : 0;
+
+    if ($sumObjetivo) {
+      $sumObjetivo.textContent =
+        "Objetivo total: " + numberToEsLocal(totalObjetivo);
+    }
+    if ($sumProgreso) {
+      $sumProgreso.textContent =
+        "Ahorrado: " +
+        numberToEsLocal(totalAhorrado) +
+        " (" +
+        pctToEsLocal(pctGlobal) +
+        ")";
+    }
+
+    if ($globalCircle) {
+      $globalCircle.style.setProperty("--pct", pctGlobal * 360 + "deg");
+    }
+    if ($globalPct) {
+      $globalPct.textContent = Math.round(pctGlobal * 100) + "%";
+    }
+
+    // capital disponible desde cuentas seleccionadas
+    const { capital, activeNames } = computeCapitalDisponible();
+    if ($sumCapital) {
+      $sumCapital.textContent =
+        "Disponible: " + numberToEsLocal(capital);
+    }
+    if ($sumOrigen) {
+      if (!activeNames.length) {
+        $sumOrigen.textContent = "Origen: sin datos";
+      } else if (activeNames.length === cuentasOrigen.length || !selectedOrigen.length) {
+        $sumOrigen.textContent = "Origen: todas";
+      } else {
+        $sumOrigen.textContent = "Origen: " + activeNames.join(", ");
+      }
+    }
+
+    // lista de objetivos
+    if (!objetivos.length) {
+      const empty = document.createElement("div");
+      empty.className = "muted objetivos-empty";
+      empty.textContent = 'Sin objetivos. Pulsa "Nuevo objetivo".';
+      $list.append(empty);
+      return;
+    }
+
+    objetivos.forEach((goal) => {
+      const card = document.createElement("article");
+      card.className = "objetivo-card";
+      card.dataset.id = goal.id;
+
+      const main = document.createElement("div");
+      main.className = "objetivo-main";
+
+      // círculo individual
+      const circle = document.createElement("div");
+      circle.className = "objetivo-circle";
+      const objetivoNum = goal.objetivo || 0;
+      const ahorradoNum = goal.ahorrado || 0;
+      const pct =
+        objetivoNum > 0
+          ? Math.max(0, Math.min(1, ahorradoNum / objetivoNum))
+          : 0;
+      const pctDisplay = Math.round(pct * 100);
+
+      circle.style.setProperty("--color", goal.color || "#7cc0ff");
+      circle.style.setProperty("--pct", pct * 360 + "deg");
+
+      const inner = document.createElement("div");
+      inner.className = "objetivo-circle-inner";
+      inner.textContent = pctDisplay + "%";
+      circle.append(inner);
+
+      // info
+      const info = document.createElement("div");
+      info.className = "objetivo-info";
+
+      const nombreEl = document.createElement("div");
+      nombreEl.className = "objetivo-nombre";
+      nombreEl.textContent = goal.nombre || "Sin nombre";
+
+      const amounts = document.createElement("div");
+      amounts.className = "objetivo-amounts";
+
+      const ahorEl = document.createElement("span");
+      ahorEl.className = "obj-ahorrado";
+      ahorEl.textContent = numberToEsLocal(ahorradoNum);
+
+      const objEl = document.createElement("span");
+      objEl.className = "obj-target";
+      objEl.textContent = " / " + numberToEsLocal(objetivoNum);
+
+      amounts.append(ahorEl, objEl);
+      info.append(nombreEl, amounts);
+
+      const fechaTxt = formatTimeLeft(goal.fecha);
+      if (fechaTxt) {
+        const fEl = document.createElement("div");
+        fEl.className = "objetivo-fecha";
+        fEl.textContent = fechaTxt;
+        info.append(fEl);
+      }
+
+      main.append(circle, info);
+
+      // menú (3 puntitos)
+      const menuBtn = document.createElement("button");
+      menuBtn.type = "button";
+      menuBtn.className = "objetivo-menu-btn";
+      menuBtn.textContent = "⋮";
+
+      const menu = document.createElement("div");
+      menu.className = "goal-menu";
+
+      const btnEdit = document.createElement("button");
+      btnEdit.type = "button";
+      btnEdit.textContent = "Editar";
+      btnEdit.addEventListener("click", () => {
+        openModalObjetivo(goal);
+        menu.classList.remove("open");
+      });
+
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.textContent = "Eliminar";
+      btnDel.addEventListener("click", () => {
+        if (
+          !confirm(`¿Eliminar el objetivo “${goal.nombre || "sin nombre"}”?`)
+        )
+          return;
+        objetivos = objetivos.filter((o) => o.id !== goal.id);
+        saveLocalObjetivos();
+        syncCloud();
+        renderObjetivos();
+      });
+
+      menu.append(btnEdit, btnDel);
+      document.body.append(menu);
+
+      menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        document.querySelectorAll(".goal-menu.open").forEach((m) => {
+          if (m !== menu) m.classList.remove("open");
+        });
+
+        const opened = menu.classList.contains("open");
+        if (opened) {
+          menu.classList.remove("open");
+          return;
+        }
+
+        const rect = menuBtn.getBoundingClientRect();
+        const menuWidth = 150;
+        const top = rect.bottom + 6;
+        const left = Math.max(8, rect.right - menuWidth);
+
+        menu.style.top = top + "px";
+        menu.style.left = left + "px";
+        menu.classList.add("open");
+
+        const closeMenu = (ev) => {
+          if (!menu.contains(ev.target) && ev.target !== menuBtn) {
+            menu.classList.remove("open");
+            document.removeEventListener("click", closeMenu);
+          }
+        };
+        document.addEventListener("click", closeMenu);
+      });
+
+      // click en la tarjeta = editar rápido
+      card.addEventListener("click", (e) => {
+        if (e.target === menuBtn) return;
+        openModalObjetivo(goal);
+      });
+
+      card.append(main, menuBtn);
+      $list.append(card);
     });
   }
 
@@ -714,10 +697,4 @@
     renderObjetivos();
     attachCloud();
   })();
-
-  if (typeof window !== "undefined"){
-    window.addEventListener("finanzas-login", function(){
-      attachCloud();
-    });
-  }
 })();
