@@ -668,17 +668,38 @@ function getSaldoCuentaEnFecha(cta, regs, targetDate){
 }
 
 function computeDeltaByAccount(periodo){
-  if(!state.registros.length) return {};
+  if (!state.registros.length) return {};
 
-  const regs = getSortedRegistros();
-  const lastReg  = regs[regs.length-1];
+  const regs     = getSortedRegistros();
+  const lastReg  = regs[regs.length - 1];
   const lastDate = new Date(lastReg.fecha);
-  const start    = getPeriodoStart(periodo, lastDate);
+
+  // inicio teórico del periodo (1 del mes, inicio de semana o año)
+  const periodStart = getPeriodoStart(periodo, lastDate);
+
+  // primer registro REAL dentro de ese periodo
+  let firstInPeriod = null;
+  for (const r of regs){
+    const d = new Date(r.fecha);
+    if (d >= periodStart && d <= lastDate){
+      firstInPeriod = r;
+      break;
+    }
+  }
+
+  // si no hay ningún registro dentro del periodo, no hay variación
+  if (!firstInPeriod){
+    return {};
+  }
+
+  const baseDate = new Date(firstInPeriod.fecha);
 
   const deltas = {};
-  state.cuentas.forEach(cta=>{
+  state.cuentas.forEach(cta => {
+    // valor actual (último saldo conocido hasta lastDate, con arrastre)
     const nowVal  = getSaldoCuentaEnFecha(cta, regs, lastDate);
-    const baseVal = getSaldoCuentaEnFecha(cta, regs, start);
+    // valor base: saldo en la fecha del PRIMER registro del periodo (con arrastre)
+    const baseVal = getSaldoCuentaEnFecha(cta, regs, baseDate);
 
     const diff = nowVal - baseVal;
     const pct  = baseVal !== 0 ? (diff / baseVal) : 0;
