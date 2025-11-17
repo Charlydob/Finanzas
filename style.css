@@ -832,13 +832,7 @@ input:focus-visible {
 
 /* ===== OBJETIVOS ===== */
 
-.panel-objetivos {
-  background: var(--card);
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
-  padding: 14px;
-  box-shadow: 0 6px 24px #0004;
-}
+
 
 .objetivos-header {
   display: flex;
@@ -1014,11 +1008,10 @@ input:focus-visible {
 /* ===== OBJETIVOS ===== */
 
 .panel-objetivos {
-  background: var(--card);
+  background: transparent;
   border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border: 0px solid var(--line);
   padding: 14px;
-  box-shadow: 0 6px 24px #0004;
 }
 
 .objetivos-header {
@@ -1058,7 +1051,15 @@ input:focus-visible {
   align-items: center;
   gap: 8px;
 }
-
+.objetivos-summary-main{
+  font-size: 14px;
+  color: #eaeef5;
+  font-weight: 500;
+}
+.objetivos-top{
+  font-size: 13px;
+  color: var(--muted);
+}
 .objetivos-summary-source #btn-origen-cuentas {
   padding: 4px 8px;
   font-size: 11px;
@@ -1117,6 +1118,29 @@ input:focus-visible {
 .objetivo-circle-inner {
   width: 44px;
   height: 44px;
+  border-radius: 50%;
+  background: #101626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.objetivo-circle-global {
+  --pct: 0deg;
+  --color: var(--accent);
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: conic-gradient(var(--color) var(--pct), rgba(8, 12, 20, 0.9) 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.objetivo-circle-inner-global{
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
   background: #101626;
   display: flex;
