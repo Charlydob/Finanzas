@@ -1620,5 +1620,56 @@ function attachCloudListeners(){
     }
   })();
 })();
+function renderRevHeader() {
+  const regs = getSortedRegistros();
+  if (!regs.length) return;
 
+  const first = regs[0];
+  const last  = regs[regs.length - 1];
+
+  const diff = last.total - first.total;
+  const pct  = first.total !== 0 ? diff / first.total : 0;
+
+  document.getElementById("rev-total").textContent = numberToEs(last.total);
+  document.getElementById("rev-var").textContent   = `${numberToEs(diff)} (${pctToEs(pct)})`;
+
+  drawRevChart(regs);
+}
+
+function drawRevChart(regs) {
+  const canvas = document.getElementById("rev-chart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0,0,w,h);
+
+  const xs = regs.map(r => new Date(r.fecha).getTime());
+  const ys = regs.map(r => r.total);
+
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs) + 1;
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+
+  const x = t => ((t - minX)/(maxX - minX)) * w;
+  const y = v => h - ((v - minY)/(maxY - minY)) * h;
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#67d5ff";
+  ctx.beginPath();
+  ctx.moveTo(x(xs[0]), y(ys[0]));
+  for (let i = 1; i < xs.length; i++){
+    ctx.lineTo(x(xs[i]), y(ys[i]));
+  }
+  ctx.stroke();
+}
+
+// 🔄 Ejecutar siempre que se pinta el dashboard
+const _oldDash = renderDashboard;
+renderDashboard = function(){
+  _oldDash();
+  renderRevHeader();
+};
 
