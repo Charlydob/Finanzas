@@ -1468,11 +1468,7 @@ const regsOrdenados = state.registros
       }
     }
 
-    const defaultFecha = last
-      ? last.fecha
-      : (state.registros.length
-          ? state.registros[state.registros.length - 1].fecha
-          : ymd(new Date()));
+    const defaultFecha = ymd(new Date());
 
     const defaultValor = last ? last.saldos[cta] : 0;
 
