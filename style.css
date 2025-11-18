@@ -5,12 +5,10 @@
   box-sizing: border-box;
   min-width: 0;
 }
-
 html {
   min-height: 100%;
   -webkit-text-size-adjust: 100%;
 }
-
 body {
   margin: 0;
   min-height: 100vh;
@@ -21,7 +19,6 @@ body {
   background-attachment: fixed;
   font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
-
 /* Contenedor centrado y ancho fijo de app móvil */
 .app-wrap,
 header,
@@ -30,14 +27,12 @@ main {
   margin: 0 auto;
   width: 100%;
 }
-
 main {
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
 /* ===== Tokens ===== */
 :root {
   --card: #151922;
@@ -48,22 +43,18 @@ main {
   --ok: #35c759;
   --bad: #ff453a;
 }
-
 /* ===== Head ===== */
 header {
   padding: 16px;
 }
-
 h1 {
   margin: 0 0 6px 0;
   font-size: 20px;
 }
-
 .tabs {
   display: flex;
   gap: 8px;
 }
-
 .tab {
   background: var(--card);
   color: #eaeef5;
@@ -71,11 +62,9 @@ h1 {
   padding: 8px 12px;
   border-radius: 999px;
 }
-
 .tab.active {
   outline: 2px solid var(--accent);
 }
-
 /* ===== Paneles ===== */
 .panel {
   background: var(--card);
@@ -85,7 +74,6 @@ h1 {
   box-shadow: 0 6px 24px #0004;
   overflow: hidden;
 }
-
 .paneldashboard {
   background: transparent;
   border: 0;
@@ -94,7 +82,6 @@ h1 {
   box-shadow: 0;
   overflow: hidden;
 }
-
 /* ===== Filas / Inputs ===== */
 .row {
   display: flex;
@@ -103,7 +90,6 @@ h1 {
   gap: 10px;
   margin: 8px 0;
 }
-
 .row input {
   width: 180px;
   padding: 10px;
@@ -115,7 +101,6 @@ h1 {
   line-height: 1.2;
   outline: none;
 }
-
 /* ===== Lista de cuentas ===== */
 .card {
   border: 1px dashed var(--line);
@@ -123,7 +108,6 @@ h1 {
   padding: 10px;
   margin-top: 6px;
 }
-
 .item {
   display: flex;
   justify-content: space-between;
@@ -131,14 +115,12 @@ h1 {
   gap: 10px;
   margin: 6px 0;
 }
-
 .item label {
   flex: 1;
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .item input {
   flex: 0 0 150px;
   text-align: right;
@@ -150,15 +132,12 @@ h1 {
   border-radius: 10px;
   padding: 10px;
 }
-
 .total strong {
   font-size: 18px;
 }
-
 .var strong {
   color: var(--muted);
 }
-
 /* ===== Actions (base) ===== */
 .actions {
   display: flex;
@@ -167,7 +146,6 @@ h1 {
   margin-top: 8px;
   align-items: center;
 }
-
 .actions button {
   background: #0e121a;
   color: #eaeef5;
@@ -178,29 +156,24 @@ h1 {
   white-space: nowrap;
   margin-bottom: 10px;
 }
-
 /* ===== Barra superior compacta (sin saltos) ===== */
 .actions-top {
   flex-wrap: nowrap;
   gap: 4px;
   margin-top: 4px;
 }
-
 .actions-top button,
 .actions-top select {
   padding: 4px 6px;
   font-size: 12px;
 }
-
 .actions-top button {
   flex: 0 0 auto;
 }
-
 .actions-top select {
   flex: 1 1 0;
   min-width: 0;
 }
-
 .actions-top #status {
   flex: 0 0 auto;
   font-size: 10px;
@@ -208,14 +181,12 @@ h1 {
   text-align: right;
   white-space: nowrap;
 }
-
 /* segunda fila de variaciones: también en una sola línea */
 .actions-variaciones {
   flex-wrap: nowrap;
   gap: 4px;
   margin-top: 4px;
 }
-
 /* ===== FILE INPUT ===== */
 #file-csv {
   display: inline-block;
@@ -231,7 +202,6 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 #file-csv::file-selector-button,
 #file-csv::-webkit-file-upload-button {
   background: #0e121a;
@@ -243,12 +213,10 @@ h1 {
   font-size: 16px;
   cursor: pointer;
 }
-
 .actions #file-csv {
   flex: 1 1 220px;
   min-width: 180px;
 }
-
 /* ===== Tabla (scroll-x interno + sticky primera columna) ===== */
 .table {
   width: 100%;
@@ -257,7 +225,6 @@ h1 {
   border-radius: 12px;
   -webkit-overflow-scrolling: touch;
 }
-
 .table table {
   border-collapse: separate;
   border-spacing: 0;
@@ -265,7 +232,6 @@ h1 {
   min-width: 100%;
   table-layout: auto;
 }
-
 th,
 td {
   border-bottom: 1px solid var(--line);
@@ -274,7 +240,6 @@ td {
   white-space: nowrap;
   background: var(--card);
 }
-
 /* primera columna (Fecha) fija */
 th:first-child,
 td:first-child {
@@ -284,7 +249,6 @@ td:first-child {
   text-align: left;
   box-shadow: 1px 0 0 var(--line);
 }
-
 /* botón ocultar/mostrar en cabecera */
 th .col-toggle {
   margin-left: 6px;
@@ -302,7 +266,6 @@ th .col-toggle {
   cursor: pointer;
   user-select: none;
 }
-
 /* ===== MODALES (BASE) ===== */
 .modal {
   position: fixed;
@@ -310,18 +273,15 @@ th .col-toggle {
   display: none;
   z-index: 9999;
 }
-
 .modal[aria-hidden="false"] {
   display: block;
 }
-
 .modal__backdrop {
   position: absolute;
   inset: 0;
   background: #0008;
   backdrop-filter: blur(2px);
 }
-
 /* Cuadro del modal (dimensiones generales) */
 .modal__dialog {
   position: relative;
@@ -340,7 +300,6 @@ th .col-toggle {
   display: flex;
   flex-direction: column;
 }
-
 .modal__header {
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
@@ -349,17 +308,14 @@ th .col-toggle {
   justify-content: space-between;
   gap: 8px;
 }
-
 .modal__body {
   padding: 12px 14px;
   overflow: auto;
 }
-
 .modal__footer {
   padding: 12px 14px;
   border-top: 1px solid var(--line);
 }
-
 /* Botón header modal (detalle cuenta) */
 .btn-header {
   background: #0e121a;
@@ -370,32 +326,27 @@ th .col-toggle {
   font-size: 12px;
   cursor: pointer;
 }
-
 /* Modal detalle cuenta (dimensiones específicas) */
 .modal-cuenta-dialog {
   max-width: 370px;
   max-height: 84vh;
   backdrop-filter: blur(9px);
 }
-
 /* modal detalle cuenta glass rojo/verde */
 .modal-cuenta-dialog.pos {
   background: rgba(24, 190, 65, 0.444);
   box-shadow: 0 18px 50px rgba(0, 128, 0, 0.35);
 }
-
 .modal-cuenta-dialog.neg {
   background: rgba(188, 18, 18, 0.427);
   box-shadow: 0 18px 50px rgba(255, 0, 0, 0.35);
 }
-
 /* ===== Tarjetas del dashboard: grid + glass tint ===== */
 .cards {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
 }
-
 .card-mini {
   position: relative;
   border: 0 solid var(--line);
@@ -404,25 +355,21 @@ th .col-toggle {
   background: rgba(16, 21, 32, 0.55);
   backdrop-filter: blur(9px);
 }
-
 /* tintado por estado */
 .card-mini.pos {
   background: rgba(20, 60, 30, 0.45);
   box-shadow: 0 6px 24px rgba(0, 128, 0, 0.12) inset;
 }
-
 .card-mini.neg {
   background: rgba(60, 20, 20, 0.45);
   box-shadow: 0 6px 24px rgba(255, 0, 0, 0.12) inset;
 }
-
 .card-mini h4 {
   margin: 0;
   font-size: 16px;
   color: #d0d6e1;
   padding-right: 54px;
 }
-
 /* insignia arriba-derecha con % y € */
 .delta-badge {
   position: absolute;
@@ -441,25 +388,20 @@ th .col-toggle {
   width: 70px;
   height: 55px;
 }
-
 .delta-badge .pct {
   font-weight: 700;
 }
-
 .delta-badge.ok {
   color: #35c759;
 }
-
 .delta-badge.bad {
   color: #ff453a;
 }
-
 .card-mini .now {
   margin-top: 8px;
   font-weight: 600;
   font-size: 16px;
 }
-
 /* selector periodo + comparador */
 #periodo,
 #comparar {
@@ -477,13 +419,11 @@ th .col-toggle {
 #periodo {
   padding-right: 2px;
 }
-
 /* en barra compacta, quitamos margen extra */
 .actions-top #periodo,
 .actions-top #comparar {
   margin-bottom: 10px;
 }
-
 /* resumen variación total */
 .var-total {
   margin-left: 0;
@@ -496,24 +436,20 @@ th .col-toggle {
   backdrop-filter: blur(9px);
   padding: 2px 8px;
 }
-
 /* variaciones: que ocupen cada una la mitad */
 .actions-variaciones .var-total,
 .actions-variaciones .var-comparada {
   flex: 1 1 0;
   min-width: 0;
 }
-
 .var-total.pos {
   background: rgba(20, 60, 30, 0.45);
   color: #b9f5c4;
 }
-
 .var-total.neg {
   background: rgba(60, 20, 20, 0.45);
   color: #ffd0d0;
 }
-
 /* resumen comparado mes/semana */
 .var-comparada {
   margin-left: 0;
@@ -532,61 +468,50 @@ th .col-toggle {
   background: rgba(20, 60, 30, 0.45);
   color: #b9f5c4;
 }
-
 .var-comparada.neg {
   background: rgba(60, 20, 20, 0.45);
   color: #ffd0d0;
 }
-
 /* tono global según variación total */
 body.trend-pos {
   background: radial-gradient(circle at top, rgba(40, 120, 60, 0.28), transparent 65%) #0d0f12;
   background-attachment: fixed;
 }
-
 body.trend-neg {
   background: radial-gradient(circle at top, rgba(140, 40, 40, 0.28), transparent 65%) #0d0f12;
   background-attachment: fixed;
 }
-
 body.trend-neutral {
   background: #0d0f12;
 }
-
 /* ===== Tabla detalle cuenta ===== */
 .table-wrapper {
   max-height: 220px;
   overflow: auto;
   border-radius: 10px;
 }
-
 .table-cuenta {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   border-radius: 10px;
 }
-
 .table-cuenta th,
 .table-cuenta td {
   border-bottom: 1px solid var(--line);
   padding: 6px 4px;
   text-align: right;
 }
-
 .table-cuenta th:first-child,
 .table-cuenta td:first-child {
   text-align: left;
 }
-
 .table-cuenta td.pos {
   color: #35c759;
 }
-
 .table-cuenta td.neg {
   color: #ff453a;
 }
-
 /* tooltip bajo la gráfica */
 .cuenta-tooltip {
   margin-top: 8px;
@@ -594,7 +519,6 @@ body.trend-neutral {
   opacity: 0.85;
   text-align: center;
 }
-
 /* Saldo total actual encima del dashboard */
 .total-header {
   display: flex;
@@ -602,7 +526,6 @@ body.trend-neutral {
   gap: 4px;
   margin-bottom: 10px;
 }
-
 .total-header > span {
   font-size: 13px;
   color: var(--muted);
@@ -616,28 +539,12 @@ body.trend-neutral {
   border: 0 solid var(--line);
   align-self: flex-end;
 }
-
-/* ===== Responsive ===== */
-@media (max-width: 480px) {
-  th:first-child,
-  td:first-child {
-    position: sticky;
-  }
-  .row input {
-    width: 140px;
-  }
-  .item input {
-    flex: 0 0 120px;
-  }
-}
-
 /* Accesibilidad foco */
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-
 /* Anti-zoom iOS */
 @supports (-webkit-touch-callout: none) {
   input,
@@ -646,14 +553,12 @@ input:focus-visible {
     font-size: 14px !important;
   }
 }
-
 /* ---- Acciones en tabla detalle cuenta (3 puntitos flotante) ---- */
 .table-cuenta td.actions-cell {
   position: relative;
   text-align: right;
   padding-right: 0;
 }
-
 .dots-btn {
   width: 28px;
   height: 28px;
@@ -668,7 +573,6 @@ input:focus-visible {
   justify-content: center;
   cursor: pointer;
 }
-
 /* menú flotante GLOBAL (no empuja la tabla) */
 .row-menu {
   position: fixed;
@@ -683,11 +587,9 @@ input:focus-visible {
   display: none;
   flex-direction: column;
 }
-
 .row-menu.open {
   display: flex;
 }
-
 .row-menu button {
   width: 100%;
   border: 0;
@@ -698,30 +600,25 @@ input:focus-visible {
   font-size: 13px;
   cursor: pointer;
 }
-
 .row-menu button:hover {
   background: rgba(255,255,255,0.05);
 }
 /* ===== Modal actualización individual (fecha + cantidad) ===== */
-
 .modal-individual {
   position: fixed;
   inset: 0;
   z-index: 10050;
   display: none;
 }
-
 .modal-individual[aria-hidden="false"] {
   display: block;
 }
-
 .modal-individual__backdrop {
   position: absolute;
   inset: 0;
   background: #0009;
   backdrop-filter: blur(4px);
 }
-
 .modal-individual__dialog {
   position: relative;
   width: 100%;
@@ -736,7 +633,6 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
 }
-
 /* header mini */
 .modal-individual__header {
   padding: 10px 14px;
@@ -746,13 +642,11 @@ input:focus-visible {
   justify-content: space-between;
   gap: 8px;
 }
-
 .modal-individual__title {
   font-size: 13px;
   font-weight: 500;
   color: #eaeef5;
 }
-
 .modal-individual__close {
   border: 0;
   background: transparent;
@@ -761,7 +655,6 @@ input:focus-visible {
   line-height: 1;
   cursor: pointer;
 }
-
 /* body */
 .modal-individual__body {
   padding: 12px 14px 6px 14px;
@@ -769,18 +662,15 @@ input:focus-visible {
   flex-direction: column;
   gap: 8px;
 }
-
 .mini-field {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
-
 .mini-field label {
   font-size: 11px;
   color: var(--muted);
 }
-
 .mini-field input {
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -789,7 +679,6 @@ input:focus-visible {
   padding: 8px 10px;
   font-size: 13px;
 }
-
 /* footer */
 .modal-individual__footer {
   padding: 8px 14px 10px 14px;
@@ -798,7 +687,6 @@ input:focus-visible {
   justify-content: flex-end;
   gap: 8px;
 }
-
 .modal-individual__btn {
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -808,16 +696,13 @@ input:focus-visible {
   background: #0e121a;
   color: #eaeef5;
 }
-
 .modal-individual__btn--primary {
   background: #1e293b;
   border-color: #334155;
 }
-
 .modal-individual__btn--primary:active {
   transform: translateY(1px);
 }
-
 /* por si lo usas dentro del modal de cuenta, que quede centrado */
 @media (max-width: 480px) {
   .modal-individual__dialog {
@@ -825,178 +710,7 @@ input:focus-visible {
     margin-top: 20vh;
   }
 }
-/* ===== Tabs: paneles ===== */
-.tab-panel[hidden] {
-  display: none;
-}
-
-/* ===== OBJETIVOS ===== */
-
-
-
-.objetivos-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.objetivos-title {
-  font-size: 14px;
-  color: var(--muted);
-}
-
-#btn-nuevo-objetivo {
-  padding: 6px 10px;
-  font-size: 13px;
-  border-radius: 999px;
-}
-
-.objetivos-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.objetivos-empty {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* tarjeta de objetivo */
-.objetivo-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 10px;
-  border-radius: 12px;
-  background: rgba(16, 21, 32, 0.85);
-  border: 1px solid var(--line);
-}
-
-.objetivo-main {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1 1 auto;
-}
-
-/* círculo de progreso */
-.objetivo-circle {
-  --pct: 0deg;
-  --color: var(--accent);
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: conic-gradient(var(--color) var(--pct), rgba(8, 12, 20, 0.9) 0deg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.objetivo-circle-inner {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #101626;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.objetivo-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.objetivo-nombre {
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.objetivo-amounts {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.objetivo-amounts .obj-ahorrado {
-  color: #eaeef5;
-}
-
-.objetivo-fecha {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* botón menú objetivo (tres puntitos) */
-.objetivo-menu-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: #0e121a;
-  color: #eaeef5;
-  font-size: 16px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-/* menú flotante de objetivos */
-.goal-menu {
-  position: fixed;
-  min-width: 130px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.6);
-  padding: 4px 0;
-  z-index: 99999;
-  display: none;
-  flex-direction: column;
-}
-
-.goal-menu.open {
-  display: flex;
-}
-
-.goal-menu button {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: #eaeef5;
-  text-align: left;
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.goal-menu button:hover {
-  background: rgba(255,255,255,0.05);
-}
 /* ===== Resumen objetivos (top bar) ===== */
-.objetivos-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
 .objetivos-summary span {
   white-space: nowrap;
 }
@@ -1004,16 +718,13 @@ input:focus-visible {
 .tab-panel[hidden] {
   display: none;
 }
-
 /* ===== OBJETIVOS ===== */
-
 .panel-objetivos {
   background: transparent;
   border-radius: var(--radius);
   border: 0px solid var(--line);
   padding: 14px;
 }
-
 .objetivos-header {
   display: flex;
   align-items: center;
@@ -1021,18 +732,15 @@ input:focus-visible {
   gap: 8px;
   margin-bottom: 10px;
 }
-
 .objetivos-title {
   font-size: 14px;
   color: var(--muted);
 }
-
 #btn-nuevo-objetivo {
   padding: 6px 10px;
   font-size: 13px;
   border-radius: 999px;
 }
-
 /* resumen superior */
 .objetivos-summary {
   display: flex;
@@ -1043,7 +751,6 @@ input:focus-visible {
   font-size: 12px;
   color: var(--muted);
 }
-
 .objetivos-summary-main,
 .objetivos-summary-source {
   display: flex;
@@ -1065,23 +772,19 @@ input:focus-visible {
   font-size: 11px;
   border-radius: 999px;
 }
-
 #obj-capital-disponible {
   font-weight: 500;
   color: #eaeef5;
 }
-
 .objetivos-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 .objetivos-empty {
   font-size: 13px;
   color: var(--muted);
 }
-
 /* tarjeta de objetivo */
 .objetivo-card {
   display: flex;
@@ -1093,14 +796,12 @@ input:focus-visible {
   background: rgba(16, 21, 32, 0.85);
   border: 1px solid var(--line);
 }
-
 .objetivo-main {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 1 1 auto;
 }
-
 /* círculo de progreso */
 .objetivo-circle {
   --pct: 0deg;
@@ -1114,7 +815,6 @@ input:focus-visible {
   justify-content: center;
   flex-shrink: 0;
 }
-
 .objetivo-circle-inner {
   width: 44px;
   height: 44px;
@@ -1149,14 +849,12 @@ input:focus-visible {
   font-size: 12px;
   font-weight: 600;
 }
-
 .objetivo-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-
 .objetivo-nombre {
   font-size: 14px;
   font-weight: 500;
@@ -1164,26 +862,21 @@ input:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .objetivo-amounts {
   font-size: 12px;
   color: var(--muted);
 }
-
 .objetivo-amounts .obj-ahorrado {
   color: #eaeef5;
 }
-
 .objetivo-fecha {
   font-size: 11px;
   color: var(--muted);
 }
-
 .objetivo-sugerido {
   font-size: 11px;
   color: #8ae9b3;
 }
-
 /* botón menú objetivo (tres puntitos) */
 .objetivo-menu-btn {
   width: 28px;
@@ -1199,7 +892,6 @@ input:focus-visible {
   justify-content: center;
   cursor: pointer;
 }
-
 /* menú flotante de objetivos */
 .goal-menu {
   position: fixed;
@@ -1213,11 +905,9 @@ input:focus-visible {
   display: none;
   flex-direction: column;
 }
-
 .goal-menu.open {
   display: flex;
 }
-
 .goal-menu button {
   width: 100%;
   border: 0;
@@ -1228,11 +918,9 @@ input:focus-visible {
   font-size: 13px;
   cursor: pointer;
 }
-
 .goal-menu button:hover {
   background: rgba(255,255,255,0.05);
 }
-
 /* modal selección cuentas origen */
 .origen-cuentas-list {
   display: flex;
@@ -1240,21 +928,18 @@ input:focus-visible {
   gap: 6px;
   margin-top: 4px;
 }
-
 .origen-cuentas-list label {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
 }
-
 .origen-note {
   margin-top: 8px;
   font-size: 11px;
   color: var(--muted);
 }
 /* ===== Login simple por ID ===== */
-
 .login-overlay {
   position: fixed;
   inset: 0;
@@ -1265,11 +950,9 @@ input:focus-visible {
   justify-content: center;
   z-index: 3000;
 }
-
 .login-overlay[aria-hidden="true"] {
   display: none;
 }
-
 .login-card {
   background: var(--card);
   border-radius: 18px;
@@ -1280,17 +963,14 @@ input:focus-visible {
   flex-direction: column;
   gap: 10px;
 }
-
 .login-card h2 {
   margin: 0 0 6px;
   font-size: 20px;
 }
-
 .login-card label {
   font-size: 13px;
   color: var(--muted);
 }
-
 .login-card input {
   margin-top: 4px;
   padding: 8px 12px;
@@ -1300,23 +980,19 @@ input:focus-visible {
   color: #f5f7ff;
   font-size: 14px;
 }
-
 .login-actions {
   display: flex;
   gap: 8px;
   margin-top: 10px;
 }
-
 .login-actions button {
   flex: 1;
 }
-
 .login-hint {
   margin: 4px 0 0;
   font-size: 11px;
   color: var(--muted);
 }
-
 body.login-active main,
 body.login-active header,
 body.login-active footer {
