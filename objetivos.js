@@ -419,30 +419,41 @@ window.addEventListener("finanzas-login", (ev) => {
 
 
   // ---- Modal selección cuentas origen ----
-  function openModalOrigen() {
-    if (!$modalOrigen || !$origenList) return;
-    $origenList.innerHTML = "";
+function openModalOrigen() {
+  if (!$modalOrigen || !$origenList) return;
 
-    if (!cuentasOrigen.length) loadCuentasLocal();
+  // siempre refrescar cuentas reales
+  loadCuentasLocal();
 
-    cuentasOrigen.forEach((c) => {
-      const id = "origen-" + c.replace(/\s+/g, "-");
-      const row = document.createElement("label");
-      const chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.id = id;
-      chk.value = c;
-      chk.checked =
-        !selectedOrigen.length || selectedOrigen.includes(c);
+  // borrar selecciones inválidas
+  selectedOrigen = (selectedOrigen || []).filter(c => cuentasOrigen.includes(c));
+  saveSelectedOrigen();
 
-      const span = document.createElement("span");
-      span.textContent = c;
-      row.append(chk, span);
-      $origenList.append(row);
-    });
+  $origenList.innerHTML = "";
 
-    $modalOrigen.setAttribute("aria-hidden", "false");
-  }
+  cuentasOrigen.forEach((c) => {
+    const id = "origen-" + c.replace(/\s+/g, "-");
+
+    const row = document.createElement("label");
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.id = id;
+    chk.value = c;
+
+    // si no hay selección → todas marcadas
+    chk.checked =
+      selectedOrigen.length === 0 || selectedOrigen.includes(c);
+
+    const span = document.createElement("span");
+    span.textContent = c;
+
+    row.append(chk, span);
+    $origenList.append(row);
+  });
+
+  $modalOrigen.setAttribute("aria-hidden", "false");
+}
+
 
   function closeModalOrigen() {
     if ($modalOrigen)
@@ -463,7 +474,7 @@ window.addEventListener("finanzas-login", (ev) => {
       checks.forEach((chk) => {
         if (chk.checked) sel.push(chk.value);
       });
-      selectedOrigen = sel;
+selectedOrigen = sel.length ? sel : [];
       saveSelectedOrigen();
       renderObjetivos(); // recalcula con las nuevas cuentas origen
       closeModalOrigen();
