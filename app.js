@@ -94,6 +94,9 @@ function saveHidden(){
   const $comparar      = document.getElementById("comparar");
   const $varComparada  = document.getElementById("var-comparada");
   const $body          = document.body;
+  // cabecera estilo Revolut
+  const $totalVariacionMini = document.getElementById("total-variacion-mini");
+  const $totalSparkline     = document.getElementById("total-sparkline");
 
   const $btnDelCuenta        = document.getElementById("btn-del-cuenta");
   const $btnActualizarCuenta = document.getElementById("btn-actualizar-cuenta");
@@ -480,6 +483,8 @@ function recalcVariaciones(){
 
   // ------- Tabla + ocultar columnas -------
   let currentColsCache = [];
+  let modoSparkline = "total"; // "total" | "periodo"
+
 
   function renderRestoreBar(cols){
     $restore.innerHTML="";
@@ -707,10 +712,8 @@ function computeDeltaByAccount(periodo){
   const lastReg  = regs[regs.length - 1];
   const lastDate = new Date(lastReg.fecha);
 
-  // inicio teórico del periodo (mes, semana, año)
   const periodStart = getPeriodoStart(periodo, lastDate);
 
-  // primer registro REAL dentro del periodo
   let firstInPeriod = null;
   for (const r of regs){
     const d = new Date(r.fecha);
@@ -720,9 +723,7 @@ function computeDeltaByAccount(periodo){
     }
   }
 
-  if (!firstInPeriod){
-    return {};
-  }
+  if (!firstInPeriod) return {};
 
   const baseDate = new Date(firstInPeriod.fecha);
 
@@ -730,18 +731,17 @@ function computeDeltaByAccount(periodo){
   state.cuentas.forEach(cta => {
     const nowVal  = getSaldoCuentaEnFecha(cta, regs, lastDate);
     const baseVal = getSaldoCuentaEnFecha(cta, regs, baseDate);
-
-    const diff = nowVal - baseVal;
-    const pct  = baseVal !== 0 ? (diff / baseVal) : 0;
-
-    deltas[cta] = { nowVal, diff, pct };
+    const diff    = nowVal - baseVal;
+    const pct     = baseVal !== 0 ? (diff / baseVal) : 0;
+    deltas[cta]   = { baseVal, nowVal, diff, pct };
   });
 
   return deltas;
 }
 
 
-  function renderDashboard(){
+
+   function renderDashboard(){
     if ($totalActual){
       const lastTotal = state.registros.length
         ? state.registros[state.registros.length - 1].total
@@ -749,37 +749,49 @@ function computeDeltaByAccount(periodo){
       $totalActual.textContent = numberToEs(lastTotal);
     }
 
-    $dashboard.innerHTML="";
-    if(!state.registros.length){
+    $dashboard.innerHTML = "";
+    if (!state.registros.length){
       $dashboard.innerHTML = '<div class="muted">Sin datos. Pulsa “Actualizar”.</div>';
       updateComparativa();
+
+      if ($totalVariacionMini){
+        $totalVariacionMini.textContent = "0,00 € · 0,00 %";
+        $totalVariacionMini.className = "total-variacion-mini";
+      }
+      if ($totalSparkline){
+        const ctx = $totalSparkline.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, $totalSparkline.width, $totalSparkline.height);
+      }
+
       return;
     }
 
     const periodoSel = (document.getElementById("periodo")?.value) || "mes";
     const deltas = computeDeltaByAccount(periodoSel);
 
-    updateTotalVariation(deltas, periodoSel);
+updateTotalVariation(deltas, modoSparkline === "total" ? "total" : periodoSel);
 
-    state.cuentas.forEach(cta=>{
-      const { nowVal, diff, pct } = deltas[cta] || { nowVal:0, diff:0, pct:0 };
+    state.cuentas.forEach(cta => {
+      const info = deltas[cta] || { nowVal: 0, diff: 0, pct: 0 };
+      const { nowVal, diff, pct } = info;
+
       const card = document.createElement("div");
-      card.className = "card-mini " + (diff>=0 ? "pos" : "neg");
+      card.className = "card-mini " + (diff >= 0 ? "pos" : "neg");
 
       const h = document.createElement("h4");
       h.textContent = cta;
       card.append(h);
 
       const badge = document.createElement("div");
-      badge.className = "delta-badge " + (diff>=0 ? "ok" : "bad");
+      badge.className = "delta-badge " + (diff >= 0 ? "ok" : "bad");
 
       const scope = document.createElement("div");
       scope.textContent =
-        (periodoSel==="semana" ? "Semana" :
-         periodoSel==="anio"   ? "Año"    : "Mes");
+        (periodoSel === "semana" ? "Semana" :
+         periodoSel === "anio"   ? "Año"    : "Mes");
 
       const pctEl = document.createElement("div");
-      pctEl.className="pct";
+      pctEl.className = "pct";
       pctEl.textContent = pctToEs(pct);
 
       const eurEl = document.createElement("div");
@@ -793,7 +805,7 @@ function computeDeltaByAccount(periodo){
       nowEl.textContent = numberToEs(nowVal);
       card.append(nowEl);
 
-      card.addEventListener("click", ()=> openCuentaModal(cta));
+      card.addEventListener("click", () => openCuentaModal(cta));
 
       $dashboard.append(card);
     });
@@ -801,13 +813,173 @@ function computeDeltaByAccount(periodo){
     updateComparativa();
   }
 
-  function updateTotalVariation(deltas, periodoSel){
+function drawTotalSparkline(periodoSel) {
+  if (!$totalSparkline || !state.registros.length) return;
+
+  const canvas = $totalSparkline;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const regs     = getSortedRegistros();
+  const lastReg  = regs.at(-1);
+  const lastDate = new Date(lastReg.fecha);
+let start;
+
+if (periodoSel === "total") {
+  // primer registro real
+  start = new Date(regs[0].fecha);
+} else {
+  // lógica normal
+  start = getPeriodoStart(periodoSel, lastDate);
+}
+
+  const serie = regs
+    .map(r => ({ fecha: new Date(r.fecha), total: r.total }))
+    .filter(r => r.fecha >= start && r.fecha <= lastDate);
+
+  if (!serie.length) return;
+
+  const xs = serie.map(p => p.fecha.getTime());
+  const ys = serie.map(p => p.total);
+
+  let minX = Math.min(...xs);
+  let maxX = Math.max(...xs);
+  if (minX === maxX) maxX += 86400000;
+
+  let minY = Math.min(...ys);
+  let maxY = Math.max(...ys);
+  if (minY === maxY) {
+    const d = Math.max(1, Math.abs(minY));
+    minY -= d * 0.5;
+    maxY += d * 0.5;
+  }
+
+  const padX = 10;
+  const padY = 10;
+
+  const xScale = t =>
+    padX + ((t - minX) / (maxX - minX)) * (w - 2 * padX);
+
+  const yScale = v =>
+    h - padY - ((v - minY) / (maxY - minY)) * (h - 2 * padY);
+
+  const pts = xs.map((t, i) => ({
+    x: xScale(t),
+    y: yScale(ys[i]),
+    fecha: serie[i].fecha,
+    total: serie[i].total
+  }));
+
+  // color según tendencia
+  const diff = ys.at(-1) - ys[0];
+  const lineColor = diff >= 0 ? "#35c759" : "#ff453a";
+
+  // ---- SUAVIZADO (curva cardinal) ----
+  function curve(ctx, points, tension = 0.25) {
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i === 0 ? i : i - 1];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) * tension;
+      const cp1y = p1.y + (p2.y - p0.y) * tension;
+      const cp2x = p2.x - (p3.x - p1.x) * tension;
+      const cp2y = p2.y - (p3.y - p1.y) * tension;
+
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  }
+
+  // ---- DIBUJAR ----
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = lineColor;
+  curve(ctx, pts, 0.18); // suavizado suave
+  ctx.stroke();
+  ctx.restore();
+
+  // ---- INTERACCIÓN: mostrar punto + tooltip ----
+  const tooltip = document.getElementById("cuenta-tooltip") || (() => {
+    const t = document.createElement("div");
+    t.id = "cuenta-tooltip";
+    t.style.position = "fixed";
+    t.style.fontSize = "11px";
+    t.style.padding = "4px 6px";
+    t.style.borderRadius = "6px";
+    t.style.background = "rgba(0,0,0,0.6)";
+    t.style.color = "#fff";
+    t.style.pointerEvents = "none";
+    t.style.zIndex = 10000;
+    t.style.display = "none";
+    document.body.appendChild(t);
+    return t;
+  })();
+
+  function nearestPoint(x) {
+    let best = null;
+    let bestDist = Infinity;
+    for (const p of pts) {
+      const d = Math.abs(p.x - x);
+      if (d < bestDist) {
+        best = p;
+        bestDist = d;
+      }
+    }
+    return best;
+  }
+
+  function showTooltip(ev) {
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.touches ? ev.touches[0].clientX - rect.left : ev.offsetX;
+
+    const p = nearestPoint(x);
+    if (!p) return;
+
+    tooltip.style.display = "block";
+    tooltip.textContent = `${numberToEs(p.total)} · ${p.fecha.toLocaleDateString()}`;
+    tooltip.style.left = (p.x + rect.left + 8) + "px";
+    tooltip.style.top = (p.y + rect.top - 20) + "px";
+
+    // highlight del punto
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = lineColor;
+    curve(ctx, pts, 0.18);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+  }
+
+  function hideTooltip() {
+    tooltip.style.display = "none";
+    drawTotalSparkline(periodoSel); // redibuja normal
+  }
+
+  canvas.onmousemove = showTooltip;
+  canvas.ontouchmove = showTooltip;
+  canvas.onmouseleave = hideTooltip;
+  canvas.ontouchend = hideTooltip;
+}
+
+
+
+   function updateTotalVariation(deltas, periodoSel){
     if (!$varTotal) return;
 
     let totalDiff = 0;
     let totalNow  = 0;
 
-    state.cuentas.forEach(cta=>{
+    state.cuentas.forEach(cta => {
       const info = deltas[cta];
       if (!info) return;
       totalDiff += info.diff;
@@ -817,8 +989,8 @@ function computeDeltaByAccount(periodo){
     const baseTotal = totalNow - totalDiff;
     const pct = baseTotal !== 0 ? (totalDiff / baseTotal) : 0;
     const scopeLabel =
-      (periodoSel==="semana" ? "Semana" :
-       periodoSel==="anio"   ? "Año"    : "Mes");
+      (periodoSel === "semana" ? "Semana" :
+       periodoSel === "anio"   ? "Año"    : "Mes");
 
     $varTotal.textContent = `${scopeLabel}: ${numberToEs(totalDiff)} (${pctToEs(pct)})`;
 
@@ -827,13 +999,54 @@ function computeDeltaByAccount(periodo){
     else if (totalDiff < 0) cls += " neg";
     $varTotal.className = cls;
 
-    if ($body){
-      $body.classList.remove("trend-pos","trend-neg","trend-neutral");
-      if (totalDiff > 0)      $body.classList.add("trend-pos");
-      else if (totalDiff < 0) $body.classList.add("trend-neg");
-      else                    $body.classList.add("trend-neutral");
-    }
+if ($totalVariacionMini){
+  updateVariacionGlobalMini();
+}
+
+
+aplicarTrendGlobal();
+
+    drawTotalSparkline(periodoSel);
   }
+function updateVariacionGlobalMini() {
+  if (!$totalVariacionMini) return;
+
+  const regs = getSortedRegistros();
+  if (!regs.length) return;
+
+  const primero = regs[0];
+  const ultimo  = regs.at(-1);
+
+  const vIni = primero.total;
+  const vFin = ultimo.total;
+
+  const diff = vFin - vIni;
+  const pct  = vIni === 0 ? 0 : diff / vIni;
+
+  $totalVariacionMini.textContent =
+    `${numberToEs(diff)} · ${pctToEs(pct)}`;
+
+  let cls = "total-variacion-mini";
+  if (diff > 0)      cls += " pos";
+  else if (diff < 0) cls += " neg";
+  $totalVariacionMini.className = cls;
+}
+
+function aplicarTrendGlobal() {
+  const regs = getSortedRegistros();
+  if (!regs.length) return;
+
+  const primero = regs[0];
+  const ultimo  = regs.at(-1);
+
+  const diff = ultimo.total - primero.total;
+
+  $body.classList.remove("trend-pos","trend-neg","trend-neutral");
+
+  if (diff > 0)      $body.classList.add("trend-pos");
+  else if (diff < 0) $body.classList.add("trend-neg");
+  else               $body.classList.add("trend-neutral");
+}
 
   function computeTotalDiffBetween(startInclusive, endExclusive){
     const regs = getSortedRegistros();
@@ -1269,8 +1482,10 @@ const regsOrdenados = state.registros
 
   const $periodo = document.getElementById("periodo");
   if($periodo){
-    $periodo.addEventListener("change", renderDashboard);
-  }
+$periodo.addEventListener("change", () => {
+  modoSparkline = "periodo";
+  renderDashboard();
+});  }
 
   // ------- Persistencia -------
   function persistLocal(){
@@ -1468,11 +1683,7 @@ const regsOrdenados = state.registros
       }
     }
 
-    const defaultFecha = last
-      ? last.fecha
-      : (state.registros.length
-          ? state.registros[state.registros.length - 1].fecha
-          : ymd(new Date()));
+const defaultFecha = ymd(new Date());
 
     const defaultValor = last ? last.saldos[cta] : 0;
 
@@ -1606,21 +1817,27 @@ function attachCloudListeners(){
   }
 
   // ------- Init -------
-  (function init(){
-    const today=new Date();
-    if ($fecha) $fecha.value=ymd(today);
-  recalcVariaciones();
-      renderInputs({});
-    renderTabla();
-    renderDashboard();
-    setGuardarLabel();
+(function init(){
+  const today=new Date();
+  if ($fecha) $fecha.value=ymd(today);
 
-    const storedUid = getUid();
-    if (storedUid){
-      applyUid(storedUid);
-      hideLogin();
-    } else {
-      showLogin();
-    }
-  })();
+  recalcVariaciones();
+  renderInputs({});
+  renderTabla();
+  renderDashboard();
+
+  // --- NUEVO ---
+  drawTotalSparkline("total");
+
+  setGuardarLabel();
+
+  const storedUid = getUid();
+  if (storedUid){
+    applyUid(storedUid);
+    hideLogin();
+  } else {
+    showLogin();
+  }
+})();
+
 })();

@@ -29,24 +29,29 @@
     </p>
   </div>
 </div>
-<header>
-  <h1>Mis Cuentas</h1>
-  <nav class="tabs">
-    <button class="tab tab-cuentas active" data-tab="cuentas">Cuentas</button>
-    <button class="tab tab-objetivos" data-tab="objetivos">Objetivos</button>
-  </nav>
-</header>
+
 
 
 <main>
   <!-- TAB CUENTAS -->
   <section id="tab-cuentas" class="paneldashboard tab-panel">
     <div class="total-header">
-      <span></span>
       <div id="total-actual" class="total-actual">0,00 €</div>
+      <div id="total-variacion-mini" class="total-variacion-mini">0,00 € · 0,00 %</div>
+      <canvas id="total-sparkline" class="total-sparkline" width="360" height="80"></canvas>
     </div>
 
+
+
     <!-- Primera fila: todo en una misma línea -->
+       <nav class="tabs">
+    <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
+      <span class="tab-icon">€</span>
+    </button>
+    <button class="tab tab-objetivos" data-tab="objetivos" aria-label="Objetivos">
+      <span class="tab-icon">🎯</span>
+    </button>
+  </nav>
     <div class="actions actions-top">
       <button id="btn-abrir-modal">Actualizar</button>
 
@@ -80,28 +85,44 @@
   <div class="objetivos-header">
     <div class="objetivos-title">Objetivos de ahorro</div>
     <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
+        <button id="btn-origen-cuentas">Cuentas origen</button>
+
   </div>
 
   <!-- BLOQUE SUPERIOR: CÍRCULO GLOBAL + RESUMEN -->
-  <div class="objetivos-top">
+<div class="objetivos-top">
+
+  <!-- Círculo global centrado -->
+  <div class="objetivos-global-wrapper">
     <div id="obj-global-circle" class="objetivo-circle objetivo-circle-global">
       <div id="obj-global-pct" class="objetivo-circle-inner objetivo-circle-inner-global">0%</div>
     </div>
-
-    <div class="objetivos-summary">
-      <div class="objetivos-summary-main">
-        <span id="obj-total-objetivo">Objetivo total: 0,00 €</span>
-        <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
-      </div>
-      
-    </div>
-    <div class="objetivos-summary-source">
-        <button id="btn-origen-cuentas">Cuentas origen</button>
-        <span id="obj-origen-resumen">Origen: todas</span>
-        <span id="obj-capital-disponible">Disponible: 0,00 €</span>
-      </div>
   </div>
 
+  <!-- Texto de resumen alineado -->
+  <div class="objetivos-resumen">
+    <div class="obj-linea">
+      <span id="obj-total-objetivo" class="obj-bold">Objetivo total: 0,00 €</span>
+    </div>
+    <div class="obj-linea">
+      <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+    </div>
+    <div class="obj-linea">
+      <span id="obj-origen-resumen">Origen: todas</span>
+    </div>
+    <div class="obj-linea">
+      <span id="obj-capital-disponible">Disponible: 0,00 €</span>
+    </div>
+  </div>
+
+  <!-- Botones alineados arriba a la derecha -->
+
+</div>
+
+<nav class="tabs">
+  <button class="tab tab-cuentas active" data-tab="cuentas"><span class="tab-icon">€</span></button>
+  <button class="tab tab-objetivos" data-tab="objetivos"><span class="tab-icon">🎯</span></button>
+</nav>
   <div id="objetivos-list" class="objetivos-list"></div>
 </section>
 
