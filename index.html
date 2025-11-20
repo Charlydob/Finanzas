@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
-  <title>Mis Cuentas — Fase 1</title>
+  <title>Cuentas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
-  <!-- LOGIN SIMPLE -->
+  <main>
+  <!-- 0️⃣ LOGIN SIMPLE -->
 <div id="login-overlay" class="login-overlay" aria-hidden="true">
   <div class="login-card">
     <h2>Accede a tus datos</h2>
@@ -31,18 +32,13 @@
 </div>
 
 
-
-<main>
-  <!-- TAB CUENTAS -->
-  <section id="tab-cuentas" class="paneldashboard tab-panel">
+  <!-- 1️⃣TAB CUENTAS -->
+  <section id="tab-cuentas" class="paneldashboard tab-panel" hidden>
     <div class="total-header">
       <div id="total-actual" class="total-actual">0,00 €</div>
       <div id="total-variacion-mini" class="total-variacion-mini">0,00 € · 0,00 %</div>
       <canvas id="total-sparkline" class="total-sparkline" width="360" height="80"></canvas>
     </div>
-
-
-
     <!-- Primera fila: todo en una misma línea -->
        <nav class="tabs">
     <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
@@ -51,7 +47,11 @@
     <button class="tab tab-objetivos" data-tab="objetivos" aria-label="Objetivos">
       <span class="tab-icon">🎯</span>
     </button>
+    <button class="tab tab-gastos" data-tab="gastos" aria-label="Gastos mensuales">
+      <span class="tab-icon">💸</span>
+    </button>
   </nav>
+
     <div class="actions actions-top">
       <button id="btn-abrir-modal">Actualizar</button>
 
@@ -80,7 +80,7 @@
     <div id="dashboard" class="cards"></div>
   </section>
 
-<!-- TAB OBJETIVOS -->
+<!-- 2️⃣TAB OBJETIVOS -->
 <section id="tab-objetivos" class=" panel-objetivos tab-panel" hidden>
   <div class="objetivos-header">
     <div class="objetivos-title">Objetivos de ahorro</div>
@@ -122,214 +122,298 @@
 <nav class="tabs">
   <button class="tab tab-cuentas active" data-tab="cuentas"><span class="tab-icon">€</span></button>
   <button class="tab tab-objetivos" data-tab="objetivos"><span class="tab-icon">🎯</span></button>
+  <button class="tab tab-gastos" data-tab="gastos"><span class="tab-icon">💸</span></button>
 </nav>
   <div id="objetivos-list" class="objetivos-list"></div>
 </section>
+<!-- TAB GASTOS FIJOS -->
+<section id="tab-gastos" class="panel-gastos tab-panel" hidden>
+<nav class="tabs">
+    <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
+      <span class="tab-icon">€</span>
+    </button>
+    <button class="tab tab-objetivos" data-tab="objetivos" aria-label="Objetivos">
+      <span class="tab-icon">🎯</span>
+    </button>
+    <button class="tab tab-gastos" data-tab="gastos" aria-label="Gastos mensuales">
+      <span class="tab-icon">💸</span>
+    </button>
+  </nav>
 
+  <div class="gastos-header panel">
+    <div class="gastos-header-top">
+      <div class="gastos-header-text">
+        <div class="gastos-diff-label">Balance mensual</div>
+        <div id="g-balance-final" class="g-balance-final">0,00 €</div>
+        <div id="g-balance-detalle" class="g-balance-detalle">
+          Ing: 0,00 € · Gastos fijos: 0,00 € · Gasto variable: 0,00 €
+        </div>
+      </div>
 
+      <div class="gastos-bars-compact">
+        <div class="g-bar-row">
+          <span>Ingresos</span>
+          <div class="g-bar">
+            <div id="g-bar-ingresos" class="g-bar-fill g-bar-fill--ingresos" style="width:0%"></div>
+          </div>
+          <span id="g-label-ingresos" class="g-bar-value">0,00 €</span>
+        </div>
+        <div class="g-bar-row">
+          <span>Gastos fijos</span>
+          <div class="g-bar">
+            <div id="g-bar-gastos" class="g-bar-fill g-bar-fill--gastos" style="width:0%"></div>
+          </div>
+          <span id="g-label-gastos" class="g-bar-value">0,00 €</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="gastos-semicircle-wrapper">
+<canvas id="g-semicircle" width="260" height="140"></canvas>
+      <div class="g-semicircle-center">
+        <div class="g-semi-line">Ingresos: <span id="g-semi-ingresos">0,00 €</span></div>
+        <div class="g-semi-line">Gastos totales: <span id="g-semi-gastos">0,00 €</span></div>
+        <div class="g-semi-line g-semi-rest">Te queda: <span id="g-semi-resto">0,00 €</span></div>
+      </div>
+    </div>
+  </div>
+ 
+
+  <div class="gastos-config panel">
+    <div class="g-config-row">
+      <label for="g-input-ingresos">Ingresos mensuales</label>
+      <div class="g-config-input">
+        <input id="g-input-ingresos" type="text" inputmode="decimal" placeholder="0,00 €" />
+        <button id="g-btn-ingresos-guardar">Guardar</button>
+      </div>
+    </div>
+    <div class="g-kpis">
+      <div id="g-kpi-comprometido" class="g-kpi-line">
+        0% de tus ingresos está comprometido en gastos fijos.
+      </div>
+      <div id="g-kpi-esencial" class="g-kpi-line">
+        Esencial: 0% · Prescindible: 0%.
+      </div>
+    </div>
+  </div>
+
+  <div class="gastos-list panel">
+    <div class="gastos-list-header">
+      <div class="gastos-list-title">Gastos mensuales fijos</div>
+      <button id="g-btn-nuevo-gasto">Añadir gasto</button>
+    </div>
+    <div id="g-categorias-chips" class="g-categorias-chips"></div>
+    <div id="gastos-list-body" class="gastos-list-body muted">
+      Aún no has añadido ningún gasto fijo.
+    </div>
+  </div>
+
+  <div class="gastos-historial panel">
+    <div class="gastos-list-header">
+      <div class="gastos-list-title">Historial mensual</div>
+      <button id="g-btn-cerrar-mes">Registrar mes actual</button>
+    </div>
+    <div id="g-historial-list" class="g-historial-list muted">
+      Sin datos todavía.
+    </div>
+  </div>
+</section>
 
 </main>
-
-
-<!-- MODAL HISTORIAL -->
-<div id="modal-historial" class="modal" aria-hidden="true">
-  <div class="modal__backdrop" id="modal-historial-close"></div>
-  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-historial-title">
-    <header class="modal__header">
-      <h3 id="modal-historial-title">Historial</h3>
-    </header>
-    <div class="modal__body">
-      <div class="actions">
-        <button id="btn-add-cuenta">Añadir cuenta</button>
-        <button id="btn-del-cuenta">Eliminar cuenta</button>
-        <button id="btn-reset">Borrar todo</button>
+  <!-- MODALES -->
+  <!-- MODAL HISTORIAL -->
+  <div id="modal-historial" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" id="modal-historial-close"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-historial-title">
+      <header class="modal__header">
+        <h3 id="modal-historial-title">Historial</h3>
+      </header>
+      <div class="modal__body">
+        <div class="actions">
+          <button id="btn-add-cuenta">Añadir cuenta</button>
+          <button id="btn-del-cuenta">Eliminar cuenta</button>
+          <button id="btn-reset">Borrar todo</button>
+        </div>
+        <div id="col-restore" class="col-restore"></div>
+        <div id="tabla-historial" class="table"></div>
       </div>
-      <div id="col-restore" class="col-restore"></div>
-      <div id="tabla-historial" class="table"></div>
-    </div>
-    <footer class="modal__footer">
-      <div class="actions">
-        <button id="btn-cerrar-modal-historial" class="btn-secondary">Cerrar</button>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<!-- MODAL DETALLE CUENTA -->
-<div id="modal-cuenta" class="modal" aria-hidden="true">
-  <div class="modal__backdrop" id="modal-cuenta-close"></div>
-  <div class="modal__dialog modal-cuenta-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-cuenta-title">
-    <header class="modal__header">
-      <h3 id="modal-cuenta-title">Detalle de cuenta</h3>
-      <button id="btn-actualizar-cuenta" class="btn-header">Actualizar</button>
-    </header>
-    <div class="modal__body">
-      <canvas id="cuenta-chart" width="360" height="180"></canvas>
-      <div id="cuenta-tooltip" class="cuenta-tooltip">—</div>
-      <div class="table-wrapper">
-        <table class="table-cuenta">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Valor</th>
-              <th>Δ€</th>
-              <th>Δ%</th>
-              <th></th> <!-- acciones -->
-            </tr>
-          </thead>
-          <tbody id="cuenta-historial-body"></tbody>
-        </table>
-      </div>
-    </div>
-    <footer class="modal__footer">
-      <div class="actions">
-        <button id="btn-cerrar-modal-cuenta" class="btn-secondary">Cerrar</button>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<!-- MODAL ACTUALIZAR -->
-<div id="modal" class="modal" aria-hidden="true">
-  <div class="modal__backdrop" id="modal-close"></div>
-  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <header class="modal__header">
-      <h3 id="modal-title">Actualizar saldos</h3>
-    </header>
-    <div class="modal__body">
-      <div class="row">
-        <label>Fecha</label>
-        <input id="fecha" type="date" />
-      </div>
-
-      <div id="cuentas-wrapper" class="card"></div>
-
-      <div class="row total">
-        <span>TOTAL</span>
-        <strong id="total">0,00 €</strong>
-      </div>
-      <div class="row var">
-        <span>Variación</span>
-        <strong id="variacion">0,00 €</strong>
-      </div>
-      <div class="row var">
-        <span>%Var</span>
-        <strong id="varpct">0,00%</strong>
-      </div>
-    </div>
-    <footer class="modal__footer">
-      <div class="actions">
-        <button id="btn-guardar">Guardar</button>
-        <button id="btn-limpiar">Limpiar</button>
-        <button id="btn-cerrar-modal" class="btn-secondary">Cancelar</button>
-      </div>
-    </footer>
-  </div>
-</div>
-<!-- MODAL ACTUALIZACIÓN INDIVIDUAL -->
-<div id="modal-individual" class="modal-individual" aria-hidden="true">
-  <div class="modal-individual__backdrop" id="modal-individual-backdrop"></div>
-  <div class="modal-individual__dialog" role="dialog" aria-modal="true">
-    <div class="modal-individual__header">
-      <div id="indiv-title" class="modal-individual__title">Actualizar cuenta</div>
-      <button type="button" id="indiv-close" class="modal-individual__close">×</button>
-    </div>
-    <div class="modal-individual__body">
-      <div class="mini-field">
-        <label for="indiv-fecha">Fecha</label>
-        <input id="indiv-fecha" type="date" />
-      </div>
-      <div class="mini-field">
-        <label for="indiv-cantidad">Cantidad</label>
-        <input id="indiv-cantidad" type="text" placeholder="0,00 €" inputmode="decimal" />
-      </div>
-    </div>
-    <div class="modal-individual__footer">
-      <button type="button" id="indiv-cancelar" class="modal-individual__btn">Cancelar</button>
-      <button type="button" id="indiv-guardar" class="modal-individual__btn modal-individual__btn--primary">Guardar</button>
+      <footer class="modal__footer">
+        <div class="actions">
+          <button id="btn-cerrar-modal-historial" class="btn-secondary">Cerrar</button>
+        </div>
+      </footer>
     </div>
   </div>
-</div>
-
-<!-- MODAL OBJETIVO -->
-<div id="modal-objetivo" class="modal" aria-hidden="true">
-  <div class="modal__backdrop" id="modal-objetivo-backdrop"></div>
-  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-objetivo-title">
-    <header class="modal__header">
-      <h3 id="modal-objetivo-title">Nuevo objetivo</h3>
-    </header>
-    <div class="modal__body">
-      <div class="row">
-        <label for="obj-nombre">Nombre</label>
-        <input id="obj-nombre" type="text" />
+  <!-- MODAL DETALLE CUENTA -->
+  <div id="modal-cuenta" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" id="modal-cuenta-close"></div>
+    <div class="modal__dialog modal-cuenta-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-cuenta-title">
+      <header class="modal__header">
+        <h3 id="modal-cuenta-title">Detalle de cuenta</h3>
+        <button id="btn-actualizar-cuenta" class="btn-header">Actualizar</button>
+      </header>
+      <div class="modal__body">
+        <canvas id="cuenta-chart" width="360" height="180"></canvas>
+        <div id="cuenta-tooltip" class="cuenta-tooltip">—</div>
+        <div class="table-wrapper">
+          <table class="table-cuenta">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Valor</th>
+                <th>Δ€</th>
+                <th>Δ%</th>
+                <th></th> <!-- acciones -->
+              </tr>
+            </thead>
+            <tbody id="cuenta-historial-body"></tbody>
+          </table>
+        </div>
       </div>
+      <footer class="modal__footer">
+        <div class="actions">
+          <button id="btn-cerrar-modal-cuenta" class="btn-secondary">Cerrar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+  <!-- MODAL ACTUALIZAR -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" id="modal-close"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <header class="modal__header">
+        <h3 id="modal-title">Actualizar saldos</h3>
+      </header>
+      <div class="modal__body">
+        <div class="row">
+          <label>Fecha</label>
+          <input id="fecha" type="date" />
+        </div>
 
-      <div class="row">
-        <label for="obj-cantidad">Objetivo (€)</label>
-        <input id="obj-cantidad" type="text" inputmode="decimal" placeholder="0,00 €" />
+        <div id="cuentas-wrapper" class="card"></div>
+
+        <div class="row total">
+          <span>TOTAL</span>
+          <strong id="total">0,00 €</strong>
+        </div>
+        <div class="row var">
+          <span>Variación</span>
+          <strong id="variacion">0,00 €</strong>
+        </div>
+        <div class="row var">
+          <span>%Var</span>
+          <strong id="varpct">0,00%</strong>
+        </div>
       </div>
-
-      <div class="row">
-        <label for="obj-ahorrado">Ahorrado (€)</label>
-        <input id="obj-ahorrado" type="text" inputmode="decimal" placeholder="0,00 €" />
+      <footer class="modal__footer">
+        <div class="actions">
+          <button id="btn-guardar">Guardar</button>
+          <button id="btn-limpiar">Limpiar</button>
+          <button id="btn-cerrar-modal" class="btn-secondary">Cancelar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+  <!-- MODAL ACTUALIZACIÓN INDIVIDUAL -->
+  <div id="modal-individual" class="modal-individual" aria-hidden="true">
+    <div class="modal-individual__backdrop" id="modal-individual-backdrop"></div>
+    <div class="modal-individual__dialog" role="dialog" aria-modal="true">
+      <div class="modal-individual__header">
+        <div id="indiv-title" class="modal-individual__title">Actualizar cuenta</div>
+        <button type="button" id="indiv-close" class="modal-individual__close">×</button>
       </div>
-
-      <div class="row">
-        <label for="obj-fecha">Fecha objetivo</label>
-        <input id="obj-fecha" type="date" />
+      <div class="modal-individual__body">
+        <div class="mini-field">
+          <label for="indiv-fecha">Fecha</label>
+          <input id="indiv-fecha" type="date" />
+        </div>
+        <div class="mini-field">
+          <label for="indiv-cantidad">Cantidad</label>
+          <input id="indiv-cantidad" type="text" placeholder="0,00 €" inputmode="decimal" />
+        </div>
       </div>
-
-      <div class="row">
-        <label for="obj-color">Color</label>
-        <input id="obj-color" type="color" value="#7cc0ff" />
+      <div class="modal-individual__footer">
+        <button type="button" id="indiv-cancelar" class="modal-individual__btn">Cancelar</button>
+        <button type="button" id="indiv-guardar" class="modal-individual__btn modal-individual__btn--primary">Guardar</button>
       </div>
     </div>
-    <footer class="modal__footer">
-      <div class="actions">
-        <button id="btn-guardar-objetivo">Guardar</button>
-        <button id="btn-cerrar-modal-objetivo" class="btn-secondary">Cancelar</button>
-      </div>
-    </footer>
   </div>
-</div>
-<!-- MODAL CUENTAS ORIGEN PARA OBJETIVOS -->
-<div id="modal-origen" class="modal" aria-hidden="true">
-  <div class="modal__backdrop" id="modal-origen-backdrop"></div>
-  <div class="modal__dialog" role="dialog" aria-modal="true">
-    <header class="modal__header">
-      <h3>Seleccionar cuentas origen</h3>
-    </header>
-    <div class="modal__body">
-      <div id="origen-cuentas-list" class="origen-cuentas-list"></div>
-      <p class="origen-note">Si no marcas ninguna, se usarán todas las cuentas.</p>
+  <!-- MODAL OBJETIVO -->
+  <div id="modal-objetivo" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" id="modal-objetivo-backdrop"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-objetivo-title">
+      <header class="modal__header">
+        <h3 id="modal-objetivo-title">Nuevo objetivo</h3>
+      </header>
+      <div class="modal__body">
+        <div class="row">
+          <label for="obj-nombre">Nombre</label>
+          <input id="obj-nombre" type="text" />
+        </div>
+
+        <div class="row">
+          <label for="obj-cantidad">Objetivo (€)</label>
+          <input id="obj-cantidad" type="text" inputmode="decimal" placeholder="0,00 €" />
+        </div>
+
+        <div class="row">
+          <label for="obj-ahorrado">Ahorrado (€)</label>
+          <input id="obj-ahorrado" type="text" inputmode="decimal" placeholder="0,00 €" />
+        </div>
+
+        <div class="row">
+          <label for="obj-fecha">Fecha objetivo</label>
+          <input id="obj-fecha" type="date" />
+        </div>
+
+        <div class="row">
+          <label for="obj-color">Color</label>
+          <input id="obj-color" type="color" value="#7cc0ff" />
+        </div>
+      </div>
+      <footer class="modal__footer">
+        <div class="actions">
+          <button id="btn-guardar-objetivo">Guardar</button>
+          <button id="btn-cerrar-modal-objetivo" class="btn-secondary">Cancelar</button>
+        </div>
+      </footer>
     </div>
-    <footer class="modal__footer">
-      <div class="actions">
-        <button id="btn-guardar-origen">Guardar</button>
-        <button id="btn-cerrar-modal-origen" class="btn-secondary">Cancelar</button>
-      </div>
-    </footer>
   </div>
-</div>
-
-
+  <!-- MODAL CUENTAS ORIGEN PARA OBJETIVOS -->
+  <div id="modal-origen" class="modal" aria-hidden="true">
+    <div class="modal__backdrop" id="modal-origen-backdrop"></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true">
+      <header class="modal__header">
+        <h3>Seleccionar cuentas origen</h3>
+      </header>
+      <div class="modal__body">
+        <div id="origen-cuentas-list" class="origen-cuentas-list"></div>
+        <p class="origen-note">Si no marcas ninguna, se usarán todas las cuentas.</p>
+      </div>
+      <footer class="modal__footer">
+        <div class="actions">
+          <button id="btn-guardar-origen">Guardar</button>
+          <button id="btn-cerrar-modal-origen" class="btn-secondary">Cancelar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNsjnKXfbOFlOh8e_NfFO94-5pfDQdelE",
-    authDomain: "finanz-7963a.firebaseapp.com",
-    databaseURL: "https://finanz-7963a-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "finanz-7963a",
-    storageBucket: "finanz-7963a.firebasestorage.app",
-    messagingSenderId: "649084249626",
-    appId: "1:649084249626:web:e00d0febe23fa4221cd3a3"
-  };
-  firebase.initializeApp(firebaseConfig);
-</script>
-<script src="app.js"></script>
-<script src="objetivos.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNsjnKXfbOFlOh8e_NfFO94-5pfDQdelE",
+      authDomain: "finanz-7963a.firebaseapp.com",
+      databaseURL: "https://finanz-7963a-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "finanz-7963a",
+      storageBucket: "finanz-7963a.firebasestorage.app",
+      messagingSenderId: "649084249626",
+      appId: "1:649084249626:web:e00d0febe23fa4221cd3a3"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
+  <script src="js/app.js"></script>
+  <script src="js/objetivos.js"></script>
 </body>
 </html>
