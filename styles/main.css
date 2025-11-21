@@ -1581,3 +1581,67 @@ select:focus-visible {
 .tab-panel[hidden] {
   display: none !important;
 }
+/* Donut tipo Google */
+#finanzas-donut{
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: conic-gradient(#f44336 0 50%, #42a5f5 50% 100%);
+  position: relative;
+  margin: 0 auto;
+}
+#finanzas-donut::before{
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  background: var(--bg-elevated, #111);
+}
+
+/* Lista simple ingresos/gastos */
+.finanzas-item{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.finanzas-item-main{
+  display: flex;
+  flex-direction: column;
+}
+.finanzas-item-meta{
+  font-size: 11px;
+  opacity: .7;
+}
+.finanzas-item-amount{
+  font-variant-numeric: tabular-nums;
+}
+.finanzas-item-delete{
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  padding: 0 4px;
+}
+
+/* Selector cuentas */
+#finanzas-cuentas-variables{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.finanzas-chip-cuenta{
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  border: 1px solid #444;
+  background: transparent;
+}
+.finanzas-chip-cuenta.is-active{
+  background: #42a5f5;
+  border-color: #42a5f5;
+  color: #fff;
+}
+.finanzas-chip-todas{
+  opacity: .8;
+}
