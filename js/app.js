@@ -27,31 +27,26 @@
   const KEY_UID    = "mis_cuentas_uid";
   const KEY_HIDDEN = "mis_cuentas_hidden_cols_by_name";
 const KEY_OBJETIVOS = "mis_cuentas_fase1_objetivos";
-const KEY_GASTOS    = "mis_cuentas_fase1_gastos";
 
   const DEFAULT_CUENTAS = [
     "Principal","Myinvestor","Revolut Main","Revolut remunerada",
     "Revolut inversión","Revolut Bitcoin","Kraken","Wallet Bitcoin"
   ];
-  const DEFAULT_GASTOS = {
-    ingresosMensuales: 0,
-    gastosFijos: [],
-    historial: []
-  };
+
 
   function getUid(){
     return localStorage.getItem(KEY_UID) || null;
   }
 
 const state = {
-    uid      : getUid(),
-    cuentas  : JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
-    registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
-    objetivos: JSON.parse(localStorage.getItem(KEY_OBJETIVOS) || "null") || {},
-    gastos   : JSON.parse(localStorage.getItem(KEY_GASTOS) || "null") || DEFAULT_GASTOS,
-    editingIndex: -1,
-    cuentaSeleccionada: null
-  };
+  uid      : getUid(),
+  cuentas  : JSON.parse(localStorage.getItem(KEY_CUENTAS)) || DEFAULT_CUENTAS,
+  registros: JSON.parse(localStorage.getItem(KEY_DATA)) || [],
+  objetivos: JSON.parse(localStorage.getItem(KEY_OBJETIVOS) || "null") || {},
+  editingIndex: -1,
+  cuentaSeleccionada: null
+};
+
 
 
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
@@ -72,8 +67,6 @@ function saveHidden(){
   const $dashboard    = document.getElementById("dashboard");
   const $totalActual  = document.getElementById("total-actual");
 
-
-  // login simple
 
   // login simple
   const $loginOverlay  = document.getElementById("login-overlay");
@@ -145,6 +138,9 @@ function saveHidden(){
   if ($btnCerrarModal) $btnCerrarModal.addEventListener("click", closeModal);
   if ($modalBackdrop)  $modalBackdrop.addEventListener("click", closeModal);
 
+if ($btnHistorial)            $btnHistorial.addEventListener("click", openHistorialModal);
+if ($btnCerrarModalHistorial) $btnCerrarModalHistorial.addEventListener("click", closeHistorialModal);
+if ($modalHistorialBackdrop)  $modalHistorialBackdrop.addEventListener("click", closeHistorialModal);
 
   if ($btnCerrarModalCuenta) $btnCerrarModalCuenta.addEventListener("click", closeCuentaModal);
   if ($modalCuentaBackdrop)  $modalCuentaBackdrop.addEventListener("click", closeCuentaModal);
@@ -479,7 +475,6 @@ function recalcVariaciones(){
           cuentas: state.cuentas,
           registros: state.registros,
           objetivos: state.objetivos,
-          gastos: state.gastos,
           updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
 
@@ -651,7 +646,6 @@ function recalcVariaciones(){
           cuentas: state.cuentas,
           registros: state.registros,
           objetivos: state.objetivos,
-          gastos: state.gastos,
           updatedAt: firebase.database.ServerValue.TIMESTAMP
         });
 
@@ -750,7 +744,6 @@ function computeDeltaByAccount(periodo){
 
   return deltas;
 }
-
 
 
 
@@ -1503,11 +1496,11 @@ $periodo.addEventListener("change", () => {
 
   // ------- Persistencia -------
 function persistLocal(){
-    localStorage.setItem(KEY_DATA,    JSON.stringify(state.registros));
-    localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
-    localStorage.setItem(KEY_OBJETIVOS, JSON.stringify(state.objetivos));
-    localStorage.setItem(KEY_GASTOS,  JSON.stringify(state.gastos));
-  }
+  localStorage.setItem(KEY_DATA,    JSON.stringify(state.registros));
+  localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
+  localStorage.setItem(KEY_OBJETIVOS, JSON.stringify(state.objetivos));
+}
+
 
 
   // ------- CSV -------
@@ -1780,12 +1773,21 @@ function attachCloudListeners(){
 
 
     recalcVariaciones();
+
     persistLocal();
-    renderInputs({});
-    renderTabla();
-    renderDashboard();
+
+renderInputs({});
+renderTabla();
+renderDashboard();
+
+// si existe finanzas.js, que repinte
+if (typeof window !== "undefined" && typeof window.renderGastosPanel === "function"){
+  window.renderGastosPanel();
+}
+
 
     setStatus("↻ Actualizado");
+
     setTimeout(() => setStatus(""), 1000);
   });
 }
@@ -1853,6 +1855,12 @@ function activarTab(name){
     btn.classList.toggle("active", btn.dataset.tab === name);
   });
 
+  // Redibujar gastos al entrar
+if (name === "gastos" &&
+    typeof window !== "undefined" &&
+    typeof window.renderGastosPanel === "function"){
+  window.renderGastosPanel();
+}
 
 }
 
@@ -1872,7 +1880,6 @@ activarTab("cuentas");
   const today=new Date();
   if ($fecha) $fecha.value=ymd(today);
 
-  ensureGastosState();
 
   recalcVariaciones();
   renderInputs({});

@@ -1645,3 +1645,12 @@ select:focus-visible {
 .finanzas-chip-todas{
   opacity: .8;
 }
+nav {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  text-align: center;
+  z-index: 100;
+}
