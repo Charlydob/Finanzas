@@ -30,17 +30,8 @@
     </p>
   </div>
 </div>
-
-
-  <!-- 1️⃣TAB CUENTAS -->
-  <section id="tab-cuentas" class="paneldashboard tab-panel" hidden>
-    <div class="total-header">
-      <div id="total-actual" class="total-actual">0,00 €</div>
-      <div id="total-variacion-mini" class="total-variacion-mini">0,00 € · 0,00 %</div>
-      <canvas id="total-sparkline" class="total-sparkline" width="360" height="80"></canvas>
-    </div>
-    <!-- Primera fila: todo en una misma línea -->
-       <nav class="tabs">
+  <!-- NAV TABS GLOBAL -->
+      <nav class="tabs">
     <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
       <span class="tab-icon">€</span>
     </button>
@@ -51,6 +42,17 @@
       <span class="tab-icon">💸</span>
     </button>
   </nav>
+
+  <!-- 1️⃣TAB CUENTAS -->
+  <section id="tab-cuentas" class="paneldashboard tab-panel" hidden>
+    <div class="total-header">
+      <div id="total-actual" class="total-actual">0,00 €</div>
+      <div id="total-variacion-mini" class="total-variacion-mini">0,00 € · 0,00 %</div>
+      <canvas id="total-sparkline" class="total-sparkline" width="360" height="80"></canvas>
+    </div>
+
+    <!-- Primera fila: todo en una misma línea -->
+
 
     <div class="actions actions-top">
       <button id="btn-abrir-modal">Actualizar</button>
@@ -82,65 +84,47 @@
 
 <!-- 2️⃣TAB OBJETIVOS -->
 <section id="tab-objetivos" class=" panel-objetivos tab-panel" hidden>
-  <div class="objetivos-header">
-    <div class="objetivos-title">Objetivos de ahorro</div>
-    <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
-        <button id="btn-origen-cuentas">Cuentas origen</button>
+      <div class="objetivos-header">
+        <div class="objetivos-title">Objetivos de ahorro</div>
+        <button id="btn-nuevo-objetivo">Nuevo objetivo</button>
+            <button id="btn-origen-cuentas">Cuentas origen</button>
 
-  </div>
+      </div>
+  
+      <!-- BLOQUE SUPERIOR: CÍRCULO GLOBAL + RESUMEN -->
+    <div class="objetivos-top">
 
-  <!-- BLOQUE SUPERIOR: CÍRCULO GLOBAL + RESUMEN -->
-<div class="objetivos-top">
+      <!-- Círculo global centrado -->
+      <div class="objetivos-global-wrapper">
+        <div id="obj-global-circle" class="objetivo-circle objetivo-circle-global">
+          <div id="obj-global-pct" class="objetivo-circle-inner objetivo-circle-inner-global">0%</div>
+        </div>
+      </div>
 
-  <!-- Círculo global centrado -->
-  <div class="objetivos-global-wrapper">
-    <div id="obj-global-circle" class="objetivo-circle objetivo-circle-global">
-      <div id="obj-global-pct" class="objetivo-circle-inner objetivo-circle-inner-global">0%</div>
+      <!-- Texto de resumen alineado -->
+      <div class="objetivos-resumen">
+        <div class="obj-linea">
+          <span id="obj-total-objetivo" class="obj-bold">Objetivo total: 0,00 €</span>
+        </div>
+        <div class="obj-linea">
+          <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
+        </div>
+        <div class="obj-linea">
+          <span id="obj-origen-resumen">Origen: todas</span>
+        </div>
+        <div class="obj-linea">
+          <span id="obj-capital-disponible">Disponible: 0,00 €</span>
+        </div>
+      </div>
+
+      <!-- Botones alineados arriba a la derecha -->
+
     </div>
-  </div>
-
-  <!-- Texto de resumen alineado -->
-  <div class="objetivos-resumen">
-    <div class="obj-linea">
-      <span id="obj-total-objetivo" class="obj-bold">Objetivo total: 0,00 €</span>
-    </div>
-    <div class="obj-linea">
-      <span id="obj-total-progreso">Ahorrado: 0,00 € (0,00%)</span>
-    </div>
-    <div class="obj-linea">
-      <span id="obj-origen-resumen">Origen: todas</span>
-    </div>
-    <div class="obj-linea">
-      <span id="obj-capital-disponible">Disponible: 0,00 €</span>
-    </div>
-  </div>
-
-  <!-- Botones alineados arriba a la derecha -->
-
-</div>
-
-<nav class="tabs">
-  <button class="tab tab-cuentas active" data-tab="cuentas"><span class="tab-icon">€</span></button>
-  <button class="tab tab-objetivos" data-tab="objetivos"><span class="tab-icon">🎯</span></button>
-  <button class="tab tab-gastos" data-tab="gastos"><span class="tab-icon">💸</span></button>
-</nav>
   <div id="objetivos-list" class="objetivos-list"></div>
 </section>
 <!-- TAB GASTOS FIJOS -->
 <section id="tab-gastos" class="panel-gastos tab-panel" hidden>
-<nav class="tabs">
-    <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
-      <span class="tab-icon">€</span>
-    </button>
-    <button class="tab tab-objetivos" data-tab="objetivos" aria-label="Objetivos">
-      <span class="tab-icon">🎯</span>
-    </button>
-    <button class="tab tab-gastos" data-tab="gastos" aria-label="Gastos mensuales">
-      <span class="tab-icon">💸</span>
-    </button>
-  </nav>
-
-  <div class="gastos-header panel">
+  <div class="gastos-header">
     <div class="gastos-header-top">
       <div class="gastos-header-text">
         <div class="gastos-diff-label">Balance mensual</div>
@@ -150,34 +134,25 @@
         </div>
       </div>
 
-      <div class="gastos-bars-compact">
-        <div class="g-bar-row">
-          <span>Ingresos</span>
-          <div class="g-bar">
-            <div id="g-bar-ingresos" class="g-bar-fill g-bar-fill--ingresos" style="width:0%"></div>
-          </div>
-          <span id="g-label-ingresos" class="g-bar-value">0,00 €</span>
-        </div>
-        <div class="g-bar-row">
-          <span>Gastos fijos</span>
-          <div class="g-bar">
-            <div id="g-bar-gastos" class="g-bar-fill g-bar-fill--gastos" style="width:0%"></div>
-          </div>
-          <span id="g-label-gastos" class="g-bar-value">0,00 €</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="gastos-semicircle-wrapper">
-<canvas id="g-semicircle" width="260" height="140"></canvas>
       <div class="g-semicircle-center">
         <div class="g-semi-line">Ingresos: <span id="g-semi-ingresos">0,00 €</span></div>
         <div class="g-semi-line">Gastos totales: <span id="g-semi-gastos">0,00 €</span></div>
         <div class="g-semi-line g-semi-rest">Te queda: <span id="g-semi-resto">0,00 €</span></div>
       </div>
     </div>
+
+    <div class="gastos-semicircle-wrapper">
+<canvas id="g-semicircle" width="260" height="140"></canvas>
+<div class="g-origen-wrapper">
+  <button id="g-btn-origen-cuentas" class="btn-pill-small">
+    Cuentas gasto variable
+  </button>
+  <span id="g-origen-cuentas-label" class="muted">Todas las cuentas</span>
+</div>
+
+    </div>
   </div>
- 
+
 
   <div class="gastos-config panel">
     <div class="g-config-row">
@@ -195,6 +170,8 @@
         Esencial: 0% · Prescindible: 0%.
       </div>
     </div>
+    <div id="ingresos-list-body" class="gastos-list-body"></div>
+
   </div>
 
   <div class="gastos-list panel">

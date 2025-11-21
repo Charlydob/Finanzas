@@ -1,8 +1,11 @@
 (function(){
   // ---- Claves y utils locales ----
-  const KEY_UID    = "mis_cuentas_uid";
-  const KEY_DATA   = "mis_cuentas_fase1_data";
-  const KEY_GASTOS = "mis_cuentas_fase1_gastos";
+const KEY_UID    = "mis_cuentas_uid";
+const KEY_DATA   = "mis_cuentas_fase1_data";
+const KEY_GASTOS = "mis_cuentas_fase1_gastos";
+const KEY_CUENTAS = "mis_cuentas_fase1_cuentas";
+const KEY_ORIGEN  = "mis_cuentas_fase1_origen_cuentas";
+
 
   const DEFAULT_GASTOS = {
     ingresosMensuales: 0,
@@ -32,6 +35,60 @@
   let uid      = localStorage.getItem(KEY_UID) || null;
   let gastos   = null;
   let registrosCtas = [];
+let cuentasCache = [];
+function getCuentaId(cta){
+  if (!cta) return "";
+  if (typeof cta === "string") return cta;
+  return cta.id || cta.key || cta.nombre || cta.codigo || "";
+}
+
+function getCuentaNombre(cta){
+  if (!cta) return "";
+  if (typeof cta === "string") return cta;
+  return cta.nombre || cta.alias || getCuentaId(cta);
+}
+
+function loadCuentasFromLocal(){
+  try{
+    const raw = localStorage.getItem(KEY_CUENTAS);
+    const parsed = raw ? JSON.parse(raw) : [];
+
+    if (Array.isArray(parsed)){
+      cuentasCache = parsed;
+    } else if (parsed && Array.isArray(parsed.cuentas)){
+      // por si estuviera guardado como {cuentas:[...]}
+      cuentasCache = parsed.cuentas;
+    } else {
+      cuentasCache = [];
+    }
+  }catch(e){
+    console.error("[GASTOS] loadCuentasFromLocal ERROR", e);
+    cuentasCache = [];
+  }
+}
+
+function loadOrigenCuentas(){
+  try{
+    const raw = localStorage.getItem(KEY_ORIGEN);
+    const val = raw ? (JSON.parse(raw) || []) : [];
+    return Array.isArray(val) ? val : [];
+  }catch(e){
+    console.error("[GASTOS] loadOrigenCuentas ERROR", e);
+    return [];
+  }
+}
+
+function saveOrigenCuentas(ids){
+  try{
+    if (ids && ids.length){
+      localStorage.setItem(KEY_ORIGEN, JSON.stringify(ids));
+    }else{
+      localStorage.removeItem(KEY_ORIGEN);
+    }
+  }catch(e){
+    console.error("[GASTOS] saveOrigenCuentas ERROR", e);
+  }
+}
 
   function loadLocalGastos(){
     try{
@@ -105,105 +162,265 @@
   const $gCategoriasChips    = document.getElementById("g-categorias-chips");
   const $gastosListBody      = document.getElementById("gastos-list-body");
   const $gHistorialList      = document.getElementById("g-historial-list");
+  const $ingresosListBody     = document.getElementById("ingresos-list-body");
+  const $btnOrigenGastoVar   = document.getElementById("g-btn-origen-cuentas");
+const $lblOrigenGastoVar   = document.getElementById("g-origen-cuentas-label");
+
 
   if (!$gBalanceFinal){
     // La página no tiene pestaña Finanzas, no hacemos nada.
     return;
   }
+function getTotalForRegByOrigen(reg, origenIds){
+  console.log("[GASTOS] getTotalForRegByOrigen() called", {
+    origenIds,
+    regRaw: reg
+  });
+
+  if (!reg){
+    console.log("[GASTOS] getTotalForRegByOrigen -> reg = null, devuelvo 0");
+    return 0;
+  }
+
+  const useAll = !Array.isArray(origenIds) || !origenIds.length;
+
+  if (useAll){
+    const t = reg.total;
+    const val = Number.isFinite(t) ? t : esToNumberLocal(t);
+    console.log("[GASTOS] getTotalForRegByOrigen -> useAll, usando reg.total", {
+      total: reg.total,
+      val
+    });
+    return val;
+  }
+
+  let sum = 0;
+  let hit = false;
+
+  // caso 1: objeto de saldos por id
+  if (reg.saldos && typeof reg.saldos === "object"){
+    console.log("[GASTOS] getTotalForRegByOrigen -> usando reg.saldos", reg.saldos);
+    origenIds.forEach(id => {
+      if (!Object.prototype.hasOwnProperty.call(reg.saldos, id)) return;
+      const raw = reg.saldos[id];
+      const v = esToNumberLocal(raw);
+      console.log("[GASTOS]   saldo por cuenta en saldos", { id, raw, v });
+      if (!Number.isFinite(v)) return;
+      sum += v;
+      hit = true;
+    });
+  }
+  // caso 2: array de cuentas
+  else if (Array.isArray(reg.cuentas)){
+    console.log("[GASTOS] getTotalForRegByOrigen -> usando reg.cuentas", reg.cuentas);
+    reg.cuentas.forEach(cta => {
+      const id = cta.id || cta.key || cta.nombre;
+      const raw = cta.saldo ?? cta.total ?? cta.valor;
+      console.log("[GASTOS]   cuenta en reg.cuentas", { cta, id, raw });
+
+      if (!id || !origenIds.includes(id)) return;
+      const v = esToNumberLocal(raw);
+      console.log("[GASTOS]   cuenta seleccionada", { id, raw, v });
+      if (!Number.isFinite(v)) return;
+      sum += v;
+      hit = true;
+    });
+  }else{
+    console.log("[GASTOS] getTotalForRegByOrigen -> reg sin saldos ni cuentas, fallback total", reg);
+  }
+
+  if (!hit){
+    const t = reg.total;
+    const val = Number.isFinite(t) ? t : esToNumberLocal(t);
+    console.log("[GASTOS] getTotalForRegByOrigen -> !hit, fallback total", {
+      total: reg.total,
+      val
+    });
+    return val;
+  }
+
+  console.log("[GASTOS] getTotalForRegByOrigen -> sum final", { sum });
+  return sum;
+}
+
+
 
   // ---- Lógica de cálculo ----
-  function computeGastoVariableMesActual(){
-    loadRegistrosLocal();
-    if (!registrosCtas.length) return { claveMes:null, gastoVariable:0 };
+function computeGastoVariableMesActual(){
+  console.log("========== [GASTOS] computeGastoVariableMesActual() ==========");
+  loadRegistrosLocal();
+  const origenIds = (typeof loadOrigenCuentas === "function") ? loadOrigenCuentas() : [];
+  console.log("[GASTOS] registrosCtas length:", registrosCtas.length);
+  console.log("[GASTOS] origenIds seleccionadas:", origenIds);
 
-    const regs = getSortedRegistrosLocal();
-    const lastReg = regs[regs.length - 1];
-    const lastDate = new Date(lastReg.fecha);
-    if (!lastDate || isNaN(lastDate.getTime())){
-      return { claveMes:null, gastoVariable:0 };
-    }
-
-    const mesKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,"0")}`;
-
-    let firstRegMes = null;
-    let lastRegMes  = null;
-
-    for (const r of regs){
-      const d = new Date(r.fecha);
-      if (!d || isNaN(d.getTime())) continue;
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-      if (key === mesKey){
-        if (!firstRegMes) firstRegMes = r;
-        lastRegMes = r;
-      }
-    }
-
-    if (!firstRegMes || !lastRegMes){
-      return { claveMes:mesKey, gastoVariable:0 };
-    }
-
-    const baseTotal = Number.isFinite(firstRegMes.total) ? firstRegMes.total : 0;
-    const lastTotal = Number.isFinite(lastRegMes.total) ? lastRegMes.total : 0;
-    const diffTotal = lastTotal - baseTotal;
-    const gastoVar  = diffTotal < 0 ? -diffTotal : 0;
-
-    return { claveMes:mesKey, gastoVariable:gastoVar };
-  }
-
-  function computeGastosMetrics(){
-    ensureGastosState();
-    const g = gastos;
-
-    // ingresos desde lista de ingresos fijos; si no hay, usar ingresosMensuales
-    let ingresos = 0;
-    let ingresosFijosTotal = 0;
-
-    if (Array.isArray(g.ingresosFijos) && g.ingresosFijos.length){
-      g.ingresosFijos.forEach(item => {
-        ingresosFijosTotal += esToNumberLocal(item.importe);
-      });
-      ingresos = ingresosFijosTotal;
-    } else {
-      ingresos = Number.isFinite(g.ingresosMensuales)
-        ? g.ingresosMensuales
-        : esToNumberLocal(g.ingresosMensuales);
-    }
-
-    let gastosFijos    = 0;
-    let esenciales     = 0;
-    let prescindibles  = 0;
-
-    if (Array.isArray(g.gastosFijos)){
-      g.gastosFijos.forEach(item => {
-        const imp = esToNumberLocal(item.importe);
-        gastosFijos += imp;
-        if (item.esencial){
-          esenciales += imp;
-        } else {
-          prescindibles += imp;
-        }
-      });
-    }
-
-    const { claveMes, gastoVariable } = computeGastoVariableMesActual();
-    const gastosTotales = gastosFijos + gastoVariable;
-    const saldoFinal    = ingresos - gastosTotales;
-
-    const pctComprometido = ingresos > 0 ? (gastosFijos / ingresos) : 0;
-    const totalEsencial   = esenciales + prescindibles;
-    const pctEsencial     = totalEsencial > 0 ? (esenciales / totalEsencial) : 0;
-
+  if (!registrosCtas.length){
+    console.log("[GASTOS] No hay registrosCtas, devuelvo 0");
     return {
-      claveMes,
-      ingresos,
-      gastosFijos,
-      gastoVariable,
-      gastosTotales,
-      saldoFinal,
-      pctComprometido,
-      pctEsencial
+      claveMes      : null,
+      gastoVariable : 0,
+      capitalDisponible : 0
     };
   }
+
+  const regs = getSortedRegistrosLocal();
+  const lastReg  = regs[regs.length - 1];
+  const lastDate = new Date(lastReg.fecha);
+
+  if (!lastDate || isNaN(lastDate.getTime())){
+    console.log("[GASTOS] lastDate inválida, devuelvo 0");
+    return {
+      claveMes      : null,
+      gastoVariable : 0,
+      capitalDisponible : 0
+    };
+  }
+
+  const mesKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,"0")}`;
+  console.log("[GASTOS] mesKey:", mesKey);
+
+  // registros SOLO del mes actual
+  const regsMes = regs.filter(r => {
+    const d = new Date(r.fecha);
+    if (!d || isNaN(d.getTime())) return false;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    return key === mesKey;
+  });
+
+  console.log("[GASTOS] regsMes length:", regsMes.length);
+  if (regsMes.length === 0){
+    return {
+      claveMes      : mesKey,
+      gastoVariable : 0,
+      capitalDisponible : 0
+    };
+  }
+
+  // si no hay filtro -> todas las cuentas son origen
+  const useAll = !Array.isArray(origenIds) || !origenIds.length;
+
+  let gastoVar = 0;
+
+  // sumamos TODAS las bajadas (deltas negativos) de las cuentas origen en el mes
+  for (let i = 1; i < regsMes.length; i++){
+    const prev = regsMes[i - 1];
+    const curr = regsMes[i];
+
+    const salPrev = prev.saldos && typeof prev.saldos === "object" ? prev.saldos : {};
+    const salCurr = curr.saldos && typeof curr.saldos === "object" ? curr.saldos : {};
+
+    const cuentas = useAll ? Object.keys(salPrev).concat(Object.keys(salCurr)) : origenIds;
+    const uniqueCuentas = Array.from(new Set(cuentas));
+
+    uniqueCuentas.forEach(id => {
+      if (!useAll && !origenIds.includes(id)) return;
+
+      const prevVal = esToNumberLocal(salPrev[id] ?? 0);
+      const currVal = esToNumberLocal(salCurr[id] ?? 0);
+      const delta   = currVal - prevVal;
+
+      if (delta < 0){
+        const gasto = -delta;
+        gastoVar += gasto;
+        console.log("[GASTOS] delta negativo mes", { id, prevVal, currVal, gastoParcial: gasto });
+      }
+    });
+  }
+
+  // capital disponible al final del mes en cuentas origen
+  let capitalDisponible = 0;
+  const lastMes = regsMes[regsMes.length - 1];
+  const salLast = lastMes.saldos && typeof lastMes.saldos === "object" ? lastMes.saldos : {};
+  const cuentasLast = useAll ? Object.keys(salLast) : origenIds;
+
+  cuentasLast.forEach(id => {
+    const v = esToNumberLocal(salLast[id] ?? 0);
+    capitalDisponible += v;
+  });
+
+  console.log("[GASTOS] computeGastoVariableMesActual fin:", {
+    mesKey,
+    gastoVar,
+    capitalDisponible
+  });
+
+  return {
+    claveMes      : mesKey,
+    gastoVariable : gastoVar,
+    capitalDisponible
+  };
+}
+
+
+
+
+function computeGastosMetrics(){
+  ensureGastosState();
+  const g = gastos;
+
+  // ingresos desde lista de ingresos fijos; si no hay, usar ingresosMensuales
+  let ingresos = 0;
+  let ingresosFijosTotal = 0;
+
+  if (Array.isArray(g.ingresosFijos) && g.ingresosFijos.length){
+    g.ingresosFijos.forEach(item => {
+      ingresosFijosTotal += esToNumberLocal(item.importe);
+    });
+    ingresos = ingresosFijosTotal;
+  } else {
+    ingresos = Number.isFinite(g.ingresosMensuales)
+      ? g.ingresosMensuales
+      : esToNumberLocal(g.ingresosMensuales);
+  }
+
+  let gastosFijos    = 0;
+  let esenciales     = 0;
+  let prescindibles  = 0;
+
+    if (Array.isArray(g.gastosFijos)){ 
+    g.gastosFijos.forEach(item => {
+      const imp = esToNumberLocal(item.importe);
+      gastosFijos += imp;
+      if (item.esencial){
+        esenciales += imp;
+      } else {
+        prescindibles += imp;
+      }
+    });
+  }
+
+  // obtenemos datos reales del mes desde registros de cuentas
+  const gVarInfo = computeGastoVariableMesActual() || {};
+  const claveMes = gVarInfo.claveMes || null;
+
+  const gastoVariable = Number.isFinite(gVarInfo.gastoVariable)
+    ? gVarInfo.gastoVariable
+    : 0;
+
+  // gastos totales = fijos + variable calculado por movimientos de cuentas
+  const gastosTotales = gastosFijos + gastoVariable;
+
+  // saldo final = ingresos - TODOS los gastos (fijos + variable)
+  const saldoFinal = ingresos - gastosTotales;
+
+  const pctComprometido = ingresos > 0 ? (gastosFijos / ingresos) : 0;
+  const totalEsencial   = esenciales + prescindibles;
+  const pctEsencial     = totalEsencial > 0 ? (esenciales / totalEsencial) : 0;
+
+  const result = {
+    claveMes,
+    ingresos,
+    gastosFijos,
+    gastoVariable,
+    gastosTotales,
+    saldoFinal,
+    pctComprometido,
+    pctEsencial
+  };
+
+  console.log("[GASTOS] computeGastosMetrics ->", result);
+  return result;
+
+}
 
   function drawGastosSemicircle(ingresos, gastosTotales){
     if (!$gSemiCanvas) return;
@@ -275,6 +492,126 @@ ctx.arc(cx, cy, radius, Math.PI, Math.PI + greenAngle, false);
 ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
     ctx.stroke();
   }
+function updateOrigenLabel(){
+  if (!$lblOrigenGastoVar) return;
+  const origenIds = loadOrigenCuentas();
+  if (!origenIds.length){
+    $lblOrigenGastoVar.textContent = "Todas las cuentas";
+    return;
+  }
+
+  const names = [];
+  origenIds.forEach(id => {
+    const cta = cuentasCache.find(c => getCuentaId(c) === id);
+    if (cta){
+      names.push(getCuentaNombre(cta));
+    }
+  });
+
+  if (!names.length){
+    $lblOrigenGastoVar.textContent = "Cuentas personalizadas";
+  }else if (names.length <= 2){
+    $lblOrigenGastoVar.textContent = names.join(", ");
+  }else{
+    $lblOrigenGastoVar.textContent = `${names[0]}, ${names[1]} (+${names.length-2})`;
+  }
+}
+
+
+function onSelectOrigenCuentas(){
+  loadCuentasFromLocal();
+  const origenIds = loadOrigenCuentas();
+
+  const { overlay, modal } = createModalBase("Cuentas para gasto variable");
+
+  const list = document.createElement("div");
+  list.className = "g-modal-list";
+
+  if (!cuentasCache.length){
+    const p = document.createElement("p");
+    p.textContent = "No hay cuentas guardadas.";
+    list.appendChild(p);
+  }else{
+    cuentasCache.forEach(cta => {
+      const id   = getCuentaId(cta);
+      const name = getCuentaNombre(cta);
+
+      const row = document.createElement("label");
+      row.className = "g-modal-row";
+
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.value = id;
+      if (!origenIds.length || origenIds.includes(id)){
+        chk.checked = true;
+      }
+
+      const span = document.createElement("span");
+      span.textContent = name || id || "Cuenta";
+
+      row.appendChild(chk);
+      row.appendChild(span);
+      list.appendChild(row);
+    });
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "g-modal-actions";
+
+  const btnCancel = document.createElement("button");
+  btnCancel.type = "button";
+  btnCancel.className = "g-modal-btn g-modal-btn--ghost";
+  btnCancel.textContent = "Cancelar";
+  btnCancel.addEventListener("click", () => {
+    closeModal(overlay);
+  });
+
+  const btnSave = document.createElement("button");
+  btnSave.type = "button";
+  btnSave.className = "g-modal-btn g-modal-btn--primary";
+  btnSave.textContent = "Guardar";
+  btnSave.addEventListener("click", () => {
+    const checks = list.querySelectorAll("input[type=checkbox]");
+    const ids = [];
+    checks.forEach(chk => {
+      if (chk.checked) ids.push(chk.value);
+    });
+    saveOrigenCuentas(ids);
+    updateOrigenLabel();
+    renderGastosPanel();
+    closeModal(overlay);
+  });
+
+  actions.appendChild(btnCancel);
+  actions.appendChild(btnSave);
+
+  modal.appendChild(list);
+  modal.appendChild(actions);
+}
+
+  // ---- Modales simples para ingresos/gastos ----
+  function createModalBase(title){
+    const overlay = document.createElement("div");
+    overlay.className = "g-modal-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "g-modal";
+
+    const h2 = document.createElement("h2");
+    h2.textContent = title;
+    modal.appendChild(h2);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    return { overlay, modal };
+  }
+
+  function closeModal(overlay){
+    if (overlay && overlay.parentNode){
+      overlay.parentNode.removeChild(overlay);
+    }
+  }
 
   // ---- Ingresos fijos (lista) ----
   function handleIngresoMenu(idx){
@@ -305,33 +642,57 @@ ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
     renderGastosPanel();
   }
 
-  function renderIngresosList(){
-    if (!$gCategoriasChips) return;
-    ensureGastosState();
+function renderIngresosList(){
+  if (!$ingresosListBody) return;
+  ensureGastosState();
 
-    const items = Array.isArray(gastos.ingresosFijos) ? gastos.ingresosFijos : [];
+  const items = Array.isArray(gastos.ingresosFijos) ? gastos.ingresosFijos : [];
 
-    $gCategoriasChips.innerHTML = "";
-
-    if (!items.length){
-      const span = document.createElement("span");
-      span.className = "muted";
-      span.textContent = "Aún no has añadido ingresos fijos.";
-      $gCategoriasChips.appendChild(span);
-      return;
-    }
-
-    items.forEach((item, idx) => {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "ingreso-chip";
-      chip.textContent = `${item.nombre || ("Ingreso " + (idx+1))} · ${numberToEsLocal(esToNumberLocal(item.importe))}`;
-      chip.addEventListener("click", () => {
-        handleIngresoMenu(idx);
-      });
-      $gCategoriasChips.appendChild(chip);
-    });
+  if (!items.length){
+    $ingresosListBody.classList.add("muted");
+    $ingresosListBody.textContent = "Aún no has añadido ingresos fijos.";
+    return;
   }
+
+  $ingresosListBody.classList.remove("muted");
+  $ingresosListBody.innerHTML = "";
+
+  items.forEach((item, idx) => {
+    const row = document.createElement("div");
+    row.className = "gasto-item ingreso-item"; // mismo estilo que gastos
+
+    const main = document.createElement("div");
+    main.className = "gasto-main";
+
+    const titleLine = document.createElement("div");
+    titleLine.className = "gasto-title-line";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "gasto-nombre";
+    nameSpan.textContent = item.nombre || `Ingreso ${idx+1}`;
+    titleLine.appendChild(nameSpan);
+
+    main.appendChild(titleLine);
+    row.appendChild(main);
+
+    const importeSpan = document.createElement("div");
+    importeSpan.className = "gasto-importe";
+    importeSpan.textContent = numberToEsLocal(esToNumberLocal(item.importe));
+    row.appendChild(importeSpan);
+
+    const menuBtn = document.createElement("button");
+    menuBtn.className = "gasto-menu-btn";
+    menuBtn.type = "button";
+    menuBtn.textContent = "⋯";
+    menuBtn.addEventListener("click", () => {
+      handleIngresoMenu(idx);
+    });
+    row.appendChild(menuBtn);
+
+    $ingresosListBody.appendChild(row);
+  });
+}
+
 
   // ---- Render principal ----
   function renderGastosList(){
@@ -506,20 +867,21 @@ ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
       $gHistorialList.appendChild(el);
     });
   }
+function renderGastosPanel(){
+  ensureGastosState();
 
-  function renderGastosPanel(){
-    ensureGastosState();
+  const m = computeGastosMetrics();
+  console.log("[GASTOS] renderGastosPanel metrics:", m);
 
-    const m = computeGastosMetrics();
-    const {
-      ingresos,
-      gastosFijos,
-      gastoVariable,
-      gastosTotales,
-      saldoFinal,
-      pctComprometido,
-      pctEsencial
-    } = m;
+  const {
+    ingresos,
+    gastosFijos,
+    gastoVariable,
+    gastosTotales,
+    saldoFinal,
+    pctComprometido,
+    pctEsencial
+  } = m;
 
     if ($gInputIngresos){
       $gInputIngresos.value = ingresos > 0 ? numberToEsLocal(ingresos) : "";
@@ -620,60 +982,184 @@ ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
   function onGuardarIngresosMensuales(){
     ensureGastosState();
 
-    const nombre = window.prompt("Nombre del ingreso fijo (ej: nómina, extra…)", "");
-    if (!nombre) return;
+    const { overlay, modal } = createModalBase("Nuevo ingreso fijo");
 
-    const importeStr = window.prompt("Importe mensual (€)", "0");
-    const importe = esToNumberLocal(importeStr);
-    if (!importe) return;
+    const rowNombre = document.createElement("div");
+    rowNombre.className = "g-modal-row";
+    const labelNombre = document.createElement("label");
+    labelNombre.textContent = "Nombre del ingreso";
+    const inputNombre = document.createElement("input");
+    inputNombre.type = "text";
+    inputNombre.placeholder = "Nómina, extra…";
+    rowNombre.appendChild(labelNombre);
+    rowNombre.appendChild(inputNombre);
 
-    if (!Array.isArray(gastos.ingresosFijos)){
-      gastos.ingresosFijos = [];
-    }
+    const rowImporte = document.createElement("div");
+    rowImporte.className = "g-modal-row";
+    const labelImporte = document.createElement("label");
+    labelImporte.textContent = "Importe mensual (€)";
+    const inputImporte = document.createElement("input");
+    inputImporte.type = "number";
+    inputImporte.inputMode = "decimal";
+    inputImporte.placeholder = "0,00";
+    rowImporte.appendChild(labelImporte);
+    rowImporte.appendChild(inputImporte);
 
-    gastos.ingresosFijos.push({
-      id     : Date.now(),
-      nombre : nombre,
-      importe: importe
+    const actions = document.createElement("div");
+    actions.className = "g-modal-actions";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "g-modal-btn g-modal-btn--ghost";
+    btnCancel.textContent = "Cancelar";
+    btnCancel.addEventListener("click", () => {
+      closeModal(overlay);
     });
 
-    // pasamos a usar solo la lista de ingresos
-    gastos.ingresosMensuales = 0;
+    const btnSave = document.createElement("button");
+    btnSave.type = "button";
+    btnSave.className = "g-modal-btn g-modal-btn--primary";
+    btnSave.textContent = "Guardar";
+    btnSave.addEventListener("click", () => {
+      const nombre  = inputNombre.value.trim();
+      const importe = esToNumberLocal(inputImporte.value);
+      if (!nombre || !importe) return;
 
-    if ($gInputIngresos){
-      $gInputIngresos.value = "";
-    }
+      if (!Array.isArray(gastos.ingresosFijos)){
+        gastos.ingresosFijos = [];
+      }
 
-    saveLocalGastos();
-    syncGastosToCloud();
-    renderGastosPanel();
+      gastos.ingresosFijos.push({
+        id     : Date.now(),
+        nombre : nombre,
+        importe: importe
+      });
+
+      // pasamos a usar solo la lista de ingresos
+      gastos.ingresosMensuales = 0;
+
+      if ($gInputIngresos){
+        $gInputIngresos.value = "";
+      }
+
+      saveLocalGastos();
+      syncGastosToCloud();
+      renderGastosPanel();
+      closeModal(overlay);
+    });
+
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnSave);
+
+    modal.appendChild(rowNombre);
+    modal.appendChild(rowImporte);
+    modal.appendChild(actions);
+
+    inputNombre.focus();
   }
+
 
   function onNuevoGastoFijo(){
     ensureGastosState();
 
-    const nombre = window.prompt("Nombre del gasto fijo (ej: alquiler, luz…)", "");
-    if (!nombre) return;
-    const importeStr = window.prompt("Importe mensual (€)", "0");
-    const importe = esToNumberLocal(importeStr);
-    if (!importe) return;
+    const { overlay, modal } = createModalBase("Nuevo gasto fijo");
 
-    const categoria = window.prompt("Categoría (comida, piso, capricho…)", "");
-    const esencialStr = window.prompt("¿Es esencial? (s/n)", "s");
-    const esencial = String(esencialStr || "").toLowerCase().startsWith("s");
+    const rowNombre = document.createElement("div");
+    rowNombre.className = "g-modal-row";
+    const labelNombre = document.createElement("label");
+    labelNombre.textContent = "Nombre del gasto";
+    const inputNombre = document.createElement("input");
+    inputNombre.type = "text";
+    inputNombre.placeholder = "Alquiler, luz…";
+    rowNombre.appendChild(labelNombre);
+    rowNombre.appendChild(inputNombre);
 
-    gastos.gastosFijos.push({
-      id: Date.now(),
-      nombre,
-      importe,
-      categoria,
-      esencial
+    const rowImporte = document.createElement("div");
+    rowImporte.className = "g-modal-row";
+    const labelImporte = document.createElement("label");
+    labelImporte.textContent = "Importe mensual (€)";
+    const inputImporte = document.createElement("input");
+    inputImporte.type = "number";
+    inputImporte.inputMode = "decimal";
+    inputImporte.placeholder = "0,00";
+    rowImporte.appendChild(labelImporte);
+    rowImporte.appendChild(inputImporte);
+
+    const rowCategoria = document.createElement("div");
+    rowCategoria.className = "g-modal-row";
+    const labelCategoria = document.createElement("label");
+    labelCategoria.textContent = "Categoría";
+    const inputCategoria = document.createElement("input");
+    inputCategoria.type = "text";
+    inputCategoria.placeholder = "Piso, comida, capricho…";
+    rowCategoria.appendChild(labelCategoria);
+    rowCategoria.appendChild(inputCategoria);
+
+    const rowEsencial = document.createElement("div");
+    rowEsencial.className = "g-modal-row";
+    const labelEsencial = document.createElement("label");
+    labelEsencial.textContent = "¿Es esencial?";
+    const selectEsencial = document.createElement("select");
+    const optSi = document.createElement("option");
+    optSi.value = "s";
+    optSi.textContent = "Sí";
+    const optNo = document.createElement("option");
+    optNo.value = "n";
+    optNo.textContent = "No";
+    selectEsencial.appendChild(optSi);
+    selectEsencial.appendChild(optNo);
+    rowEsencial.appendChild(labelEsencial);
+    rowEsencial.appendChild(selectEsencial);
+
+    const actions = document.createElement("div");
+    actions.className = "g-modal-actions";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.className = "g-modal-btn g-modal-btn--ghost";
+    btnCancel.textContent = "Cancelar";
+    btnCancel.addEventListener("click", () => {
+      closeModal(overlay);
     });
 
-    saveLocalGastos();
-    syncGastosToCloud();
-    renderGastosPanel();
+    const btnSave = document.createElement("button");
+    btnSave.type = "button";
+    btnSave.className = "g-modal-btn g-modal-btn--primary";
+    btnSave.textContent = "Guardar";
+    btnSave.addEventListener("click", () => {
+      const nombre    = inputNombre.value.trim();
+      const importe   = esToNumberLocal(inputImporte.value);
+      const categoria = inputCategoria.value.trim();
+      const esencial  = String(selectEsencial.value || "").toLowerCase() === "s";
+
+      if (!nombre || !importe) return;
+
+      gastos.gastosFijos.push({
+        id       : Date.now(),
+        nombre   : nombre,
+        importe  : importe,
+        categoria: categoria,
+        esencial : esencial
+      });
+
+      saveLocalGastos();
+      syncGastosToCloud();
+      renderGastosPanel();
+      closeModal(overlay);
+    });
+
+    actions.appendChild(btnCancel);
+    actions.appendChild(btnSave);
+
+    modal.appendChild(rowNombre);
+    modal.appendChild(rowImporte);
+    modal.appendChild(rowCategoria);
+    modal.appendChild(rowEsencial);
+    modal.appendChild(actions);
+
+    inputNombre.focus();
   }
+
 
   function onRegistrarMesGastos(){
     ensureGastosState();
@@ -717,10 +1203,12 @@ ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
 
   // ---- Init ----
   function initFinanzas(){
-    loadLocalGastos();
-    ensureGastosState();
-    loadRegistrosLocal();
-    renderGastosPanel();
+  loadLocalGastos();
+  ensureGastosState();
+  loadRegistrosLocal();
+  loadCuentasFromLocal();
+  updateOrigenLabel();
+  renderGastosPanel();
 
     if ($gBtnIngresosGuardar){
       $gBtnIngresosGuardar.addEventListener("click", onGuardarIngresosMensuales);
@@ -728,6 +1216,9 @@ ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
     if ($gInputIngresos){
       $gInputIngresos.addEventListener("change", onGuardarIngresosMensuales);
     }
+      if ($btnOrigenGastoVar){
+    $btnOrigenGastoVar.addEventListener("click", onSelectOrigenCuentas);
+  }
     if ($gBtnNuevoGasto){
       $gBtnNuevoGasto.addEventListener("click", onNuevoGastoFijo);
     }
