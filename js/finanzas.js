@@ -246,109 +246,118 @@ function getTotalForRegByOrigen(reg, origenIds){
 
 
   // ---- Lógica de cálculo ----
+// helper nuevo
+function getTotalForRegPorOrigen(reg, origenIds){
+  if (!reg) return 0;
+
+  const useAll = !Array.isArray(origenIds) || !origenIds.length;
+
+  // 1) si hay saldos por cuenta, intentamos sumar solo las de origen
+  if (reg.saldos && typeof reg.saldos === "object"){
+    const keys = useAll ? Object.keys(reg.saldos) : origenIds;
+    let sum  = 0;
+    let hits = 0;
+
+    keys.forEach(id => {
+      if (!useAll && !origenIds.includes(id)) return;
+      if (!Object.prototype.hasOwnProperty.call(reg.saldos, id)) return;
+
+      const v = esToNumberLocal(reg.saldos[id]);
+      if (!Number.isFinite(v)) return;
+
+      sum  += v;
+      hits += 1;
+    });
+
+    if (hits > 0){
+      console.log("[GASTOS] getTotalForRegPorOrigen usando saldos", { fecha: reg.fecha, sum });
+      return sum;
+    }
+  }
+
+  // 2) fallback: usar reg.total global
+  const t = reg.total;
+  const val = Number.isFinite(t) ? t : esToNumberLocal(t);
+  console.log("[GASTOS] getTotalForRegPorOrigen fallback total", { fecha: reg.fecha, val });
+  return val;
+}
+
+// función corregida
 function computeGastoVariableMesActual(){
   console.log("========== [GASTOS] computeGastoVariableMesActual() ==========");
   loadRegistrosLocal();
+
   const origenIds = (typeof loadOrigenCuentas === "function") ? loadOrigenCuentas() : [];
   console.log("[GASTOS] registrosCtas length:", registrosCtas.length);
   console.log("[GASTOS] origenIds seleccionadas:", origenIds);
 
-  if (!registrosCtas.length){
+  if (!Array.isArray(registrosCtas) || !registrosCtas.length){
     console.log("[GASTOS] No hay registrosCtas, devuelvo 0");
     return {
-      claveMes      : null,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : null,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
 
-  const regs = getSortedRegistrosLocal();
+  const regs     = getSortedRegistrosLocal();
   const lastReg  = regs[regs.length - 1];
   const lastDate = new Date(lastReg.fecha);
 
   if (!lastDate || isNaN(lastDate.getTime())){
     console.log("[GASTOS] lastDate inválida, devuelvo 0");
     return {
-      claveMes      : null,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : null,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
 
   const mesKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,"0")}`;
   console.log("[GASTOS] mesKey:", mesKey);
 
-  // registros SOLO del mes actual
-  const regsMes = regs.filter(r => {
-    const d = new Date(r.fecha);
-    if (!d || isNaN(d.getTime())) return false;
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-    return key === mesKey;
-  });
+  let firstRegMes = null;
+  let lastRegMes  = null;
 
-  console.log("[GASTOS] regsMes length:", regsMes.length);
-  if (regsMes.length === 0){
+  for (const r of regs){
+    const d = new Date(r.fecha);
+    if (!d || isNaN(d.getTime())) continue;
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    if (key === mesKey){
+      if (!firstRegMes) firstRegMes = r;
+      lastRegMes = r;
+    }
+  }
+
+  console.log("[GASTOS] firstRegMes:", firstRegMes);
+  console.log("[GASTOS] lastRegMes:",  lastRegMes);
+
+  if (!firstRegMes || !lastRegMes){
+    console.log("[GASTOS] No hay firstRegMes/lastRegMes para ese mes");
     return {
-      claveMes      : mesKey,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : mesKey,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
 
-  // si no hay filtro -> todas las cuentas son origen
-  const useAll = !Array.isArray(origenIds) || !origenIds.length;
+  const baseTotal = getTotalForRegPorOrigen(firstRegMes, origenIds);
+  const lastTotal = getTotalForRegPorOrigen(lastRegMes , origenIds);
 
-  let gastoVar = 0;
-
-  // sumamos TODAS las bajadas (deltas negativos) de las cuentas origen en el mes
-  for (let i = 1; i < regsMes.length; i++){
-    const prev = regsMes[i - 1];
-    const curr = regsMes[i];
-
-    const salPrev = prev.saldos && typeof prev.saldos === "object" ? prev.saldos : {};
-    const salCurr = curr.saldos && typeof curr.saldos === "object" ? curr.saldos : {};
-
-    const cuentas = useAll ? Object.keys(salPrev).concat(Object.keys(salCurr)) : origenIds;
-    const uniqueCuentas = Array.from(new Set(cuentas));
-
-    uniqueCuentas.forEach(id => {
-      if (!useAll && !origenIds.includes(id)) return;
-
-      const prevVal = esToNumberLocal(salPrev[id] ?? 0);
-      const currVal = esToNumberLocal(salCurr[id] ?? 0);
-      const delta   = currVal - prevVal;
-
-      if (delta < 0){
-        const gasto = -delta;
-        gastoVar += gasto;
-        console.log("[GASTOS] delta negativo mes", { id, prevVal, currVal, gastoParcial: gasto });
-      }
-    });
-  }
-
-  // capital disponible al final del mes en cuentas origen
-  let capitalDisponible = 0;
-  const lastMes = regsMes[regsMes.length - 1];
-  const salLast = lastMes.saldos && typeof lastMes.saldos === "object" ? lastMes.saldos : {};
-  const cuentasLast = useAll ? Object.keys(salLast) : origenIds;
-
-  cuentasLast.forEach(id => {
-    const v = esToNumberLocal(salLast[id] ?? 0);
-    capitalDisponible += v;
-  });
-
-  console.log("[GASTOS] computeGastoVariableMesActual fin:", {
+  console.log("[GASTOS] computeGastoVariableMesActual resultados:", {
     mesKey,
-    gastoVar,
-    capitalDisponible
+    baseTotal,
+    lastTotal,
+    diffTotal: lastTotal - baseTotal
   });
 
   return {
-    claveMes      : mesKey,
-    gastoVariable : gastoVar,
-    capitalDisponible
+    claveMes  : mesKey,
+    baseTotal,
+    lastTotal
   };
 }
+
 
 
 
