@@ -261,6 +261,7 @@ function computeGastoVariableMesActual(){
       capitalDisponible : 0
     };
   }
+  
 
   const regs = getSortedRegistrosLocal();
   const lastReg  = regs[regs.length - 1];
