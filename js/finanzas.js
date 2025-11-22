@@ -249,30 +249,30 @@ function getTotalForRegByOrigen(reg, origenIds){
 function computeGastoVariableMesActual(){
   console.log("========== [GASTOS] computeGastoVariableMesActual() ==========");
   loadRegistrosLocal();
+
   const origenIds = (typeof loadOrigenCuentas === "function") ? loadOrigenCuentas() : [];
   console.log("[GASTOS] registrosCtas length:", registrosCtas.length);
   console.log("[GASTOS] origenIds seleccionadas:", origenIds);
 
-  if (!registrosCtas.length){
+  if (!Array.isArray(registrosCtas) || !registrosCtas.length){
     console.log("[GASTOS] No hay registrosCtas, devuelvo 0");
     return {
-      claveMes      : null,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : null,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
-  
 
-  const regs = getSortedRegistrosLocal();
-  const lastReg  = regs[regs.length - 1];
-  const lastDate = new Date(lastReg.fecha);
+  const regs = getSortedRegistrosLocal(); // ya viene ordenado, pero por si acaso reusamos esto
+  const lastRegGlobal = regs[regs.length - 1];
+  const lastDate = new Date(lastRegGlobal.fecha);
 
   if (!lastDate || isNaN(lastDate.getTime())){
     console.log("[GASTOS] lastDate inválida, devuelvo 0");
     return {
-      claveMes      : null,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : null,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
 
@@ -288,68 +288,77 @@ function computeGastoVariableMesActual(){
   });
 
   console.log("[GASTOS] regsMes length:", regsMes.length);
-  if (regsMes.length === 0){
+  if (!regsMes.length){
     return {
-      claveMes      : mesKey,
-      gastoVariable : 0,
-      capitalDisponible : 0
+      claveMes  : mesKey,
+      baseTotal : 0,
+      lastTotal : 0
     };
   }
 
-  // si no hay filtro -> todas las cuentas son origen
+  // aseguramos orden dentro del mes por si hubiera algo raro
+  regsMes.sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const firstRegMes = regsMes[0];
+  const lastRegMes  = regsMes[regsMes.length - 1];
+
+  console.log("[GASTOS] firstRegMes.fecha:", firstRegMes.fecha);
+  console.log("[GASTOS] lastRegMes.fecha:",  lastRegMes.fecha);
+
   const useAll = !Array.isArray(origenIds) || !origenIds.length;
 
-  let gastoVar = 0;
+  function getTotalEnReg(reg){
+    if (!reg) return 0;
 
-  // sumamos TODAS las bajadas (deltas negativos) de las cuentas origen en el mes
-  for (let i = 1; i < regsMes.length; i++){
-    const prev = regsMes[i - 1];
-    const curr = regsMes[i];
+    const sal = (reg.saldos && typeof reg.saldos === "object") ? reg.saldos : null;
+    let sum  = 0;
+    let hits = 0;
 
-    const salPrev = prev.saldos && typeof prev.saldos === "object" ? prev.saldos : {};
-    const salCurr = curr.saldos && typeof curr.saldos === "object" ? curr.saldos : {};
+    if (sal){
+      const keys = useAll ? Object.keys(sal) : origenIds;
+      keys.forEach(id => {
+        if (!useAll && !origenIds.includes(id)) return;
+        if (!Object.prototype.hasOwnProperty.call(sal, id)) return;
 
-    const cuentas = useAll ? Object.keys(salPrev).concat(Object.keys(salCurr)) : origenIds;
-    const uniqueCuentas = Array.from(new Set(cuentas));
+        const v = esToNumberLocal(sal[id]);
+        if (!Number.isFinite(v)) return;
 
-    uniqueCuentas.forEach(id => {
-      if (!useAll && !origenIds.includes(id)) return;
+        sum  += v;
+        hits += 1;
+      });
+    }
 
-      const prevVal = esToNumberLocal(salPrev[id] ?? 0);
-      const currVal = esToNumberLocal(salCurr[id] ?? 0);
-      const delta   = currVal - prevVal;
+    if (hits > 0){
+      console.log("[GASTOS] getTotalEnReg usando saldos", { fecha: reg.fecha, sum });
+      return sum;
+    }
 
-      if (delta < 0){
-        const gasto = -delta;
-        gastoVar += gasto;
-        console.log("[GASTOS] delta negativo mes", { id, prevVal, currVal, gastoParcial: gasto });
-      }
-    });
+    // fallback: usar reg.total
+    const t = reg.total;
+    const val = Number.isFinite(t) ? t : esToNumberLocal(t);
+    console.log("[GASTOS] getTotalEnReg fallback total", { fecha: reg.fecha, val });
+    return val;
   }
 
-  // capital disponible al final del mes en cuentas origen
-  let capitalDisponible = 0;
-  const lastMes = regsMes[regsMes.length - 1];
-  const salLast = lastMes.saldos && typeof lastMes.saldos === "object" ? lastMes.saldos : {};
-  const cuentasLast = useAll ? Object.keys(salLast) : origenIds;
+  const baseTotal = getTotalEnReg(firstRegMes);
+  const lastTotal = getTotalEnReg(lastRegMes);
 
-  cuentasLast.forEach(id => {
-    const v = esToNumberLocal(salLast[id] ?? 0);
-    capitalDisponible += v;
-  });
-
-  console.log("[GASTOS] computeGastoVariableMesActual fin:", {
+  console.log("[GASTOS] computeGastoVariableMesActual resultados:", {
     mesKey,
-    gastoVar,
-    capitalDisponible
+    firstFecha: firstRegMes.fecha,
+    lastFecha : lastRegMes.fecha,
+    baseTotal,
+    lastTotal,
+    diffCuentas: baseTotal - lastTotal
   });
 
   return {
-    claveMes      : mesKey,
-    gastoVariable : gastoVar,
-    capitalDisponible
+    claveMes  : mesKey,
+    baseTotal,
+    lastTotal
   };
 }
+
 
 
 
