@@ -246,118 +246,99 @@ function getTotalForRegByOrigen(reg, origenIds){
 
 
   // ---- Lógica de cálculo ----
+// Usa SIEMPRE el primer y último registro REAL del mes actual
+// para las cuentas seleccionadas como "origen de gasto variable"
 function computeGastoVariableMesActual(){
   console.log("========== [GASTOS] computeGastoVariableMesActual() ==========");
   loadRegistrosLocal();
 
-  const origenIds = (typeof loadOrigenCuentas === "function") ? loadOrigenCuentas() : [];
-  console.log("[GASTOS] registrosCtas length:", registrosCtas.length);
+  const origenIds = (typeof loadOrigenCuentas === "function")
+    ? loadOrigenCuentas()
+    : [];
+
+  console.log("[GASTOS] registrosCtas (raw):", registrosCtas);
   console.log("[GASTOS] origenIds seleccionadas:", origenIds);
 
   if (!Array.isArray(registrosCtas) || !registrosCtas.length){
-    console.log("[GASTOS] No hay registrosCtas, devuelvo 0");
+    console.log("[GASTOS] No hay registrosCtas, gastoVariable = 0");
     return {
-      claveMes  : null,
-      baseTotal : 0,
-      lastTotal : 0
+      claveMes      : null,
+      gastoVariable : 0
     };
   }
 
-  const regs = getSortedRegistrosLocal(); // ya viene ordenado, pero por si acaso reusamos esto
-  const lastRegGlobal = regs[regs.length - 1];
-  const lastDate = new Date(lastRegGlobal.fecha);
+  // 1) Ordenamos por fecha
+  const regs = getSortedRegistrosLocal();
+  console.log("[GASTOS] regs ordenados:", regs);
+
+  const lastReg = regs[regs.length - 1];
+  const lastDate = new Date(lastReg.fecha);
 
   if (!lastDate || isNaN(lastDate.getTime())){
-    console.log("[GASTOS] lastDate inválida, devuelvo 0");
+    console.log("[GASTOS] lastDate inválida, gastoVariable = 0");
     return {
-      claveMes  : null,
-      baseTotal : 0,
-      lastTotal : 0
+      claveMes      : null,
+      gastoVariable : 0
     };
   }
 
-  const mesKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth()+1).padStart(2,"0")}`;
-  console.log("[GASTOS] mesKey:", mesKey);
+  const year  = lastDate.getFullYear();
+  const month = lastDate.getMonth() + 1;
+  const mesKey = `${year}-${String(month).padStart(2,"0")}`;
 
-  // registros SOLO del mes actual
+  console.log("[GASTOS] mesKey actual =", mesKey, "(mes", month, "año", year, ")");
+
+  // 2) Filtramos solo registros de ese mes
   const regsMes = regs.filter(r => {
     const d = new Date(r.fecha);
     if (!d || isNaN(d.getTime())) return false;
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-    return key === mesKey;
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    return k === mesKey;
   });
 
-  console.log("[GASTOS] regsMes length:", regsMes.length);
+  console.log("[GASTOS] regsMes detectados para este mes:", regsMes);
+
   if (!regsMes.length){
+    console.log("[GASTOS] No hay registros para este mes, gastoVariable = 0");
     return {
-      claveMes  : mesKey,
-      baseTotal : 0,
-      lastTotal : 0
+      claveMes      : mesKey,
+      gastoVariable : 0
     };
   }
 
-  // aseguramos orden dentro del mes por si hubiera algo raro
-  regsMes.sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
-
+  // 3) Primer y último registro REAL del mes
   const firstRegMes = regsMes[0];
   const lastRegMes  = regsMes[regsMes.length - 1];
 
-  console.log("[GASTOS] firstRegMes.fecha:", firstRegMes.fecha);
-  console.log("[GASTOS] lastRegMes.fecha:",  lastRegMes.fecha);
+  console.log("[GASTOS] === RESUMEN REGS MES ===");
+  console.log("→ Primer registro del mes:", firstRegMes.fecha, firstRegMes.saldos);
+  console.log("→ Último registro del mes :", lastRegMes.fecha , lastRegMes.saldos);
 
-  const useAll = !Array.isArray(origenIds) || !origenIds.length;
+  // 4) Total en cuentas origen al inicio y al final
+  const baseTotal = getTotalForRegByOrigen(firstRegMes, origenIds);
+  const lastTotal = getTotalForRegByOrigen(lastRegMes , origenIds);
 
-  function getTotalEnReg(reg){
-    if (!reg) return 0;
+  const diff = baseTotal - lastTotal;       // lo que "ha bajado"
+  const gastoVar = diff > 0 ? diff : 0;     // si ha subido, gasto = 0
 
-    const sal = (reg.saldos && typeof reg.saldos === "object") ? reg.saldos : null;
-    let sum  = 0;
-    let hits = 0;
-
-    if (sal){
-      const keys = useAll ? Object.keys(sal) : origenIds;
-      keys.forEach(id => {
-        if (!useAll && !origenIds.includes(id)) return;
-        if (!Object.prototype.hasOwnProperty.call(sal, id)) return;
-
-        const v = esToNumberLocal(sal[id]);
-        if (!Number.isFinite(v)) return;
-
-        sum  += v;
-        hits += 1;
-      });
-    }
-
-    if (hits > 0){
-      console.log("[GASTOS] getTotalEnReg usando saldos", { fecha: reg.fecha, sum });
-      return sum;
-    }
-
-    // fallback: usar reg.total
-    const t = reg.total;
-    const val = Number.isFinite(t) ? t : esToNumberLocal(t);
-    console.log("[GASTOS] getTotalEnReg fallback total", { fecha: reg.fecha, val });
-    return val;
-  }
-
-  const baseTotal = getTotalEnReg(firstRegMes);
-  const lastTotal = getTotalEnReg(lastRegMes);
-
-  console.log("[GASTOS] computeGastoVariableMesActual resultados:", {
-    mesKey,
-    firstFecha: firstRegMes.fecha,
-    lastFecha : lastRegMes.fecha,
-    baseTotal,
-    lastTotal,
-    diffCuentas: baseTotal - lastTotal
-  });
+  console.log("[GASTOS] === RESULTADO FINAL ===");
+  console.log("Mes:          ", mesKey);
+  console.log("Saldo inicial:", baseTotal);
+  console.log("Saldo final  :", lastTotal);
+  console.log("Diff (ini-fin)", diff);
+  console.log("Gasto var    :", gastoVar);
 
   return {
-    claveMes  : mesKey,
-    baseTotal,
-    lastTotal
+    claveMes      : mesKey,
+    gastoVariable : gastoVar
   };
 }
+
+
+
+
+
+
 
 
 
@@ -367,13 +348,18 @@ function computeGastosMetrics(){
   ensureGastosState();
   const g = gastos;
 
+  console.log("----- [GASTOS] computeGastosMetrics INICIO -----");
+  console.log("[GASTOS] estado bruto de gastos:", JSON.stringify(g));
+
   // ingresos desde lista de ingresos fijos; si no hay, usar ingresosMensuales
   let ingresos = 0;
   let ingresosFijosTotal = 0;
 
   if (Array.isArray(g.ingresosFijos) && g.ingresosFijos.length){
     g.ingresosFijos.forEach(item => {
-      ingresosFijosTotal += esToNumberLocal(item.importe);
+      const imp = esToNumberLocal(item.importe);
+      ingresosFijosTotal += imp;
+      console.log("[GASTOS] ingreso fijo item:", item, "importe num:", imp);
     });
     ingresos = ingresosFijosTotal;
   } else {
@@ -382,11 +368,17 @@ function computeGastosMetrics(){
       : esToNumberLocal(g.ingresosMensuales);
   }
 
+  console.log("[GASTOS] ingresos calculados:", {
+    ingresos,
+    ingresosFijosTotal,
+    ingresosMensualesRaw: g.ingresosMensuales
+  });
+
   let gastosFijos    = 0;
   let esenciales     = 0;
   let prescindibles  = 0;
 
-    if (Array.isArray(g.gastosFijos)){ 
+  if (Array.isArray(g.gastosFijos)){
     g.gastosFijos.forEach(item => {
       const imp = esToNumberLocal(item.importe);
       gastosFijos += imp;
@@ -395,22 +387,26 @@ function computeGastosMetrics(){
       } else {
         prescindibles += imp;
       }
+      console.log("[GASTOS] gasto fijo item:", item, "importe num:", imp);
     });
   }
 
-  // obtenemos datos reales del mes desde registros de cuentas
-  const gVarInfo = computeGastoVariableMesActual() || {};
-  const claveMes = gVarInfo.claveMes || null;
+  console.log("[GASTOS] resumen gastos fijos:", {
+    gastosFijos,
+    esenciales,
+    prescindibles
+  });
 
-  const gastoVariable = Number.isFinite(gVarInfo.gastoVariable)
-    ? gVarInfo.gastoVariable
-    : 0;
+  const gVarInfo = computeGastoVariableMesActual();
+  console.log("[GASTOS] datos de gastoVariable desde computeGastoVariableMesActual:", gVarInfo);
 
-  // gastos totales = fijos + variable calculado por movimientos de cuentas
+  const claveMes = gVarInfo && gVarInfo.claveMes || null;
+  const gVarRaw  = gVarInfo && gVarInfo.gastoVariable;
+  const gastoVariable = Number.isFinite(gVarRaw) ? gVarRaw : 0;
+
   const gastosTotales = gastosFijos + gastoVariable;
+  const saldoFinal    = ingresos - gastosTotales;
 
-  // saldo final = ingresos - TODOS los gastos (fijos + variable)
-  const saldoFinal = ingresos - gastosTotales;
 
   const pctComprometido = ingresos > 0 ? (gastosFijos / ingresos) : 0;
   const totalEsencial   = esenciales + prescindibles;
@@ -427,10 +423,21 @@ function computeGastosMetrics(){
     pctEsencial
   };
 
-  console.log("[GASTOS] computeGastosMetrics ->", result);
-  return result;
+  console.log("[GASTOS] RESUMEN FINAL:", {
+    claveMes,
+    ingresos,
+    gastosFijos,
+    gastoVariable,
+    gastosTotales,
+    saldoFinal,
+    pctComprometido,
+    pctEsencial
+  });
+  console.log("----- [GASTOS] computeGastosMetrics FIN -----");
 
+  return result;
 }
+
 
   function drawGastosSemicircle(ingresos, gastosTotales){
     if (!$gSemiCanvas) return;
