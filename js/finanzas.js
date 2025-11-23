@@ -67,25 +67,27 @@ function loadCuentasFromLocal(){
   }
 }
 
-function loadOrigenCuentas(){
-  try{
-    const raw = localStorage.getItem(KEY_ORIGEN);
+// cargar selección
+function loadOrigenCuentas() {
+  try {
+    const raw = localStorage.getItem(KEY_ORIGEN_FINANZAS);
     const val = raw ? (JSON.parse(raw) || []) : [];
     return Array.isArray(val) ? val : [];
-  }catch(e){
+  } catch (e) {
     console.error("[GASTOS] loadOrigenCuentas ERROR", e);
     return [];
   }
 }
 
-function saveOrigenCuentas(ids){
-  try{
-    if (ids && ids.length){
-      localStorage.setItem(KEY_ORIGEN, JSON.stringify(ids));
-    }else{
-      localStorage.removeItem(KEY_ORIGEN);
+// guardar selección
+function saveOrigenCuentas(ids) {
+  try {
+    if (ids && ids.length) {
+      localStorage.setItem(KEY_ORIGEN_FINANZAS, JSON.stringify(ids));
+    } else {
+      localStorage.removeItem(KEY_ORIGEN_FINANZAS);
     }
-  }catch(e){
+  } catch (e) {
     console.error("[GASTOS] saveOrigenCuentas ERROR", e);
   }
 }
@@ -1217,6 +1219,7 @@ function renderGastosPanel(){
     syncGastosToCloud();
     renderGastosPanel();
   }
+const KEY_ORIGEN_FINANZAS = "mis_cuentas_fase1_origen_cuentas_finanzas";
 
   // ---- Init ----
   function initFinanzas(){

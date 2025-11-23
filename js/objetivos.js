@@ -180,21 +180,23 @@ window.addEventListener("finanzas-login", (ev) => {
     });
   }
 
-  function loadSelectedOrigen() {
-    try {
-      const raw = localStorage.getItem(KEY_ORIGEN);
-      selectedOrigen = raw ? JSON.parse(raw) || [] : [];
-    } catch (e) {
-      console.error("[OBJ] loadSelectedOrigen ERROR", e);
-      selectedOrigen = [];
-    }
-    console.log("[OBJ] loadSelectedOrigen ->", selectedOrigen);
+// cargar selección
+function loadSelectedOrigen() {
+  try {
+    const raw = localStorage.getItem(KEY_ORIGEN_OBJETIVOS);
+    selectedOrigen = raw ? JSON.parse(raw) || [] : [];
+  } catch (e) {
+    console.error("[OBJ] loadSelectedOrigen ERROR", e);
+    selectedOrigen = [];
   }
+  console.log("[OBJ] loadSelectedOrigen ->", selectedOrigen);
+}
 
-  function saveSelectedOrigen() {
-    console.log("[OBJ] saveSelectedOrigen ->", selectedOrigen);
-    localStorage.setItem(KEY_ORIGEN, JSON.stringify(selectedOrigen));
-  }
+// guardar selección
+function saveSelectedOrigen() {
+  console.log("[OBJ] saveSelectedOrigen ->", selectedOrigen);
+  localStorage.setItem(KEY_ORIGEN_OBJETIVOS, JSON.stringify(selectedOrigen));
+}
 
   function syncCloud() {
     if (!window.firebase || !uid) {
@@ -837,3 +839,4 @@ selectedOrigen = sel.length ? sel : [];
     console.log("[OBJ] init() done");
   })();
 })();
+const KEY_ORIGEN_OBJETIVOS = "mis_cuentas_fase1_origen_cuentas_objetivos";
