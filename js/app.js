@@ -47,6 +47,21 @@ const state = {
   cuentaSeleccionada: null
 };
 
+// --- Snapshot global para otros módulos (objetivos.js, finanzas.js) ---
+if (typeof window !== "undefined") {
+  window.getFinanzasSnapshot = function () {
+    try {
+      const cuentas   = Array.isArray(state.cuentas)   ? state.cuentas.slice()   : [];
+      const registros = Array.isArray(state.registros) ? state.registros.slice() : [];
+      return { cuentas, registros };
+    } catch (e) {
+      console.error("[APP] getFinanzasSnapshot ERROR", e);
+      return { cuentas: [], registros: [] };
+    }
+  };
+}
+
+
 
 
   let hiddenCols = new Set(JSON.parse(localStorage.getItem(KEY_HIDDEN) || "[]"));
@@ -1898,5 +1913,23 @@ activarTab("cuentas");
     showLogin();
   }
 })();
+// ======== EXPORTS GLOBALES PARA OTROS JS ========
+window.FIN_GLOBAL = {
+  getCuentas() {
+    return Array.isArray(state.cuentas) ? [...state.cuentas] : [];
+  },
+  getRegistros() {
+    return Array.isArray(state.registros) ? JSON.parse(JSON.stringify(state.registros)) : [];
+  },
+  getLastRegistro() {
+    if (!state.registros.length) return null;
+    return JSON.parse(JSON.stringify(state.registros[state.registros.length - 1]));
+  },
+  getSaldosActuales() {
+    const last = this.getLastRegistro();
+    return last?.saldos ? { ...last.saldos } : {};
+  }
+};
+console.log("[GLOBAL] FIN_GLOBAL listo");
 
 })();

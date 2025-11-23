@@ -49,6 +49,19 @@ function getCuentaNombre(cta){
 }
 
 function loadCuentasFromLocal(){
+  // 1º: intentar usar snapshot de app.js
+  if (typeof window !== "undefined" && typeof window.getFinanzasSnapshot === "function") {
+    try {
+      const snap = window.getFinanzasSnapshot();
+      cuentasCache = Array.isArray(snap.cuentas) ? snap.cuentas.slice() : [];
+      console.log("[GASTOS] loadCuentasFromLocal -> FIN_SNAPSHOT", cuentasCache.length);
+      return;
+    } catch (e) {
+      console.error("[GASTOS] loadCuentasFromLocal FIN_SNAPSHOT ERROR", e);
+    }
+  }
+
+  // Fallback: localStorage
   try{
     const raw = localStorage.getItem(KEY_CUENTAS);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -66,6 +79,8 @@ function loadCuentasFromLocal(){
     cuentasCache = [];
   }
 }
+
+
 
 // cargar selección
 function loadOrigenCuentas() {
@@ -127,8 +142,20 @@ function saveOrigenCuentas(ids) {
       gastos.ingresosMensuales = 0;
     }
   }
-
   function loadRegistrosLocal(){
+    // 1º: intentar usar snapshot de app.js
+    if (typeof window !== "undefined" && typeof window.getFinanzasSnapshot === "function") {
+      try {
+        const snap = window.getFinanzasSnapshot();
+        registrosCtas = Array.isArray(snap.registros) ? snap.registros.slice() : [];
+        console.log("[GASTOS] loadRegistrosLocal -> FIN_SNAPSHOT", registrosCtas.length);
+        return;
+      } catch (e) {
+        console.error("[GASTOS] loadRegistrosLocal FIN_SNAPSHOT ERROR", e);
+      }
+    }
+
+    // Fallback: localStorage
     try{
       const raw = localStorage.getItem(KEY_DATA);
       registrosCtas = raw ? (JSON.parse(raw) || []) : [];
@@ -138,11 +165,14 @@ function saveOrigenCuentas(ids) {
     }
   }
 
-  function getSortedRegistrosLocal(){
-    const regs = Array.isArray(registrosCtas) ? registrosCtas.slice() : [];
-    regs.sort((a,b)=> new Date(a.fecha) - new Date(b.fecha));
-    return regs;
-  }
+
+
+function getSortedRegistrosLocal(){
+  return [...registrosCtas].sort((a,b)=>
+    new Date(a.fecha) - new Date(b.fecha)
+  );
+}
+
 
   // ---- DOM pestaña Finanzas/Gastos ----
   const $gBalanceFinal       = document.getElementById("g-balance-final");
@@ -250,6 +280,8 @@ function getTotalForRegByOrigen(reg, origenIds){
   // ---- Lógica de cálculo ----
 // Usa SIEMPRE el primer y último registro REAL del mes actual
 // para las cuentas seleccionadas como "origen de gasto variable"
+// Usa el primer y último dato del MES de CADA cuenta seleccionada
+// y luego suma por cuentas para obtener el gasto variable.
 function computeGastoVariableMesActual(){
   console.log("========== [GASTOS] computeGastoVariableMesActual() ==========");
   loadRegistrosLocal();
@@ -273,7 +305,7 @@ function computeGastoVariableMesActual(){
   const regs = getSortedRegistrosLocal();
   console.log("[GASTOS] regs ordenados:", regs);
 
-  const lastReg = regs[regs.length - 1];
+  const lastReg  = regs[regs.length - 1];
   const lastDate = new Date(lastReg.fecha);
 
   if (!lastDate || isNaN(lastDate.getTime())){
@@ -284,8 +316,8 @@ function computeGastoVariableMesActual(){
     };
   }
 
-  const year  = lastDate.getFullYear();
-  const month = lastDate.getMonth() + 1;
+  const year   = lastDate.getFullYear();
+  const month  = lastDate.getMonth() + 1;
   const mesKey = `${year}-${String(month).padStart(2,"0")}`;
 
   console.log("[GASTOS] mesKey actual =", mesKey, "(mes", month, "año", year, ")");
@@ -308,22 +340,85 @@ function computeGastoVariableMesActual(){
     };
   }
 
-  // 3) Primer y último registro REAL del mes
-  const firstRegMes = regsMes[0];
-  const lastRegMes  = regsMes[regsMes.length - 1];
+  // --- CASO SIN ORIGEN SELECCIONADO: se comporta como antes (usa total del registro) ---
+  if (!Array.isArray(origenIds) || !origenIds.length){
+    const firstRegMes = regsMes[0];
+    const lastRegMes  = regsMes[regsMes.length - 1];
 
-  console.log("[GASTOS] === RESUMEN REGS MES ===");
-  console.log("→ Primer registro del mes:", firstRegMes.fecha, firstRegMes.saldos);
-  console.log("→ Último registro del mes :", lastRegMes.fecha , lastRegMes.saldos);
+    console.log("[GASTOS] === RESUMEN REGS MES (GLOBAL) ===");
+    console.log("→ Primer registro del mes:", firstRegMes.fecha, firstRegMes.saldos);
+    console.log("→ Último registro del mes :", lastRegMes.fecha , lastRegMes.saldos);
 
-  // 4) Total en cuentas origen al inicio y al final
-  const baseTotal = getTotalForRegByOrigen(firstRegMes, origenIds);
-  const lastTotal = getTotalForRegByOrigen(lastRegMes , origenIds);
+    const baseTotal = getTotalForRegByOrigen(firstRegMes, []);
+    const lastTotal = getTotalForRegByOrigen(lastRegMes , []);
+
+    const diff = baseTotal - lastTotal;       // lo que "ha bajado"
+    const gastoVar = diff > 0 ? diff : 0;     // si ha subido, gasto = 0
+
+    console.log("[GASTOS] === RESULTADO FINAL (GLOBAL) ===");
+    console.log("Mes:          ", mesKey);
+    console.log("Saldo inicial:", baseTotal);
+    console.log("Saldo final  :", lastTotal);
+    console.log("Diff (ini-fin)", diff);
+    console.log("Gasto var    :", gastoVar);
+
+    return {
+      claveMes      : mesKey,
+      gastoVariable : gastoVar
+    };
+  }
+
+  // --- CASO CON ORIGEN SELECCIONADO: primer y último dato del mes POR CUENTA ---
+  const firstVals = {};
+  const lastVals  = {};
+  const hasFirst  = {};
+
+  regsMes.forEach(reg => {
+    const saldos = (reg && reg.saldos && typeof reg.saldos === "object")
+      ? reg.saldos
+      : null;
+    if (!saldos) return;
+
+    origenIds.forEach(id => {
+      if (!Object.prototype.hasOwnProperty.call(saldos, id)) return;
+
+      const raw = saldos[id];
+      const v   = esToNumberLocal(raw);
+      if (!Number.isFinite(v)) return;
+
+      if (!hasFirst[id]){
+        firstVals[id] = v;   // primer dato del mes para esa cuenta
+        hasFirst[id]  = true;
+      }
+      // este se machaca y se queda SIEMPRE con el último visto en el mes
+      lastVals[id] = v;
+    });
+  });
+
+  console.log("[GASTOS] firstVals por cuenta:", firstVals);
+  console.log("[GASTOS] lastVals  por cuenta:", lastVals);
+
+  let baseTotal = 0;
+  let lastTotal = 0;
+
+  origenIds.forEach(id => {
+    if (!hasFirst[id]) return; // esta cuenta no tiene datos en el mes
+
+    const ini = Number(firstVals[id]) || 0;
+    const fin = Number(
+      Object.prototype.hasOwnProperty.call(lastVals, id)
+        ? lastVals[id]
+        : firstVals[id] // por si sólo hay un dato en todo el mes
+    ) || 0;
+
+    baseTotal += ini;
+    lastTotal += fin;
+  });
 
   const diff = baseTotal - lastTotal;       // lo que "ha bajado"
   const gastoVar = diff > 0 ? diff : 0;     // si ha subido, gasto = 0
 
-  console.log("[GASTOS] === RESULTADO FINAL ===");
+  console.log("[GASTOS]🛑🛑 === RESULTADO FINAL (POR CUENTA) ===");
   console.log("Mes:          ", mesKey);
   console.log("Saldo inicial:", baseTotal);
   console.log("Saldo final  :", lastTotal);
@@ -335,16 +430,6 @@ function computeGastoVariableMesActual(){
     gastoVariable : gastoVar
   };
 }
-
-
-
-
-
-
-
-
-
-
 
 function computeGastosMetrics(){
   ensureGastosState();

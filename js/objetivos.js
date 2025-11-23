@@ -160,6 +160,23 @@ window.addEventListener("finanzas-login", (ev) => {
   }
 
   function loadCuentasLocal() {
+    // 1º: intentar usar los datos vivos de app.js
+    if (typeof window !== "undefined" && typeof window.getFinanzasSnapshot === "function") {
+      try {
+        const snap = window.getFinanzasSnapshot();
+        cuentasOrigen = Array.isArray(snap.cuentas)   ? snap.cuentas.slice()   : [];
+        registrosCtas = Array.isArray(snap.registros) ? snap.registros.slice() : [];
+        console.log("[OBJ] loadCuentasLocal -> FIN_SNAPSHOT", {
+          cuentasOrigen: cuentasOrigen.length,
+          registrosCtas: registrosCtas.length,
+        });
+        return;
+      } catch (e) {
+        console.error("[OBJ] loadCuentasLocal FIN_SNAPSHOT ERROR", e);
+      }
+    }
+
+    // Fallback: localStorage (por si no existe app.js o no hay snapshot)
     try {
       const rawC = localStorage.getItem(KEY_CUENTAS);
       cuentasOrigen = rawC ? JSON.parse(rawC) || [] : [];
@@ -174,11 +191,13 @@ window.addEventListener("finanzas-login", (ev) => {
       console.error("[OBJ] loadCuentasLocal registros ERROR", e);
       registrosCtas = [];
     }
-    console.log("[OBJ] loadCuentasLocal ->", {
+    console.log("[OBJ] loadCuentasLocal -> LOCALSTORAGE", {
       cuentasOrigen: cuentasOrigen.length,
-      registrosCtas: registrosCtas.length
+      registrosCtas: registrosCtas.length,
     });
   }
+
+
 
 // cargar selección
 function loadSelectedOrigen() {
@@ -276,28 +295,24 @@ function saveSelectedOrigen() {
     return last;
   }
 
-  function computeCapitalDisponible() {
-    // siempre recarga local para ser dinámico
-    loadCuentasLocal();
+function computeCapitalDisponible() {
+  loadCuentasLocal();
+  const saldos = (window.FIN_GLOBAL && window.FIN_GLOBAL.getSaldosActuales())
+    || {};
 
-    const last = getLastRegistroCuentas();
-    if (!last || !last.saldos) {
-      return { capital: 0, activeNames: [] };
-    }
+  const active = selectedOrigen?.length
+    ? selectedOrigen.filter(n => cuentasOrigen.includes(n))
+    : cuentasOrigen.slice();
 
-    const active =
-      selectedOrigen && selectedOrigen.length
-        ? selectedOrigen.filter((n) => cuentasOrigen.includes(n))
-        : cuentasOrigen.slice();
+  let capital = 0;
+  active.forEach(name => {
+    const v = saldos[name];
+    if (Number.isFinite(v)) capital += v;
+  });
 
-    let capital = 0;
-    active.forEach((name) => {
-      const v = last.saldos[name];
-      if (Number.isFinite(v)) capital += v;
-    });
+  return { capital, activeNames: active };
+}
 
-    return { capital, activeNames: active };
-  }
 
   function getTotalsObjetivos() {
     let totalObjetivo = 0;
