@@ -1770,3 +1770,22 @@ margin-top: 0px;
 .gasto-main{ 
   font-size: 8px;
  }
+ #g-input-inversion {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  font-size: 12px;
+}
+
+#g-input-inversion::placeholder {
+  color: #6b7280;
+}
+
+#g-btn-inversion-guardar {
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+}

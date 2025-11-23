@@ -134,11 +134,12 @@
         </div>
       </div>
 
-      <div class="g-semicircle-center">
-        <div class="g-semi-line">Ingresos: <span id="g-semi-ingresos">0,00 €</span></div>
-        <div class="g-semi-line">Gastos totales: <span id="g-semi-gastos">0,00 €</span></div>
-        <div class="g-semi-line g-semi-rest">Te queda: <span id="g-semi-resto">0,00 €</span></div>
-      </div>
+<div class="g-semicircle-center">
+  <div class="g-semi-line">Ingresos: <span id="g-semi-ingresos">0,00 €</span></div>
+  <div class="g-semi-line">Inversión: <span id="g-semi-inversion">0,00 €</span></div>
+  <div class="g-semi-line">Gastos totales: <span id="g-semi-gastos">0,00 €</span></div>
+  <div class="g-semi-line g-semi-rest">Te queda: <span id="g-semi-resto">0,00 €</span></div>
+</div>
     </div>
 
     <div class="gastos-semicircle-wrapper">
@@ -153,26 +154,25 @@
     </div>
   </div>
 
-
-  <div class="gastos-config panel">
-    <div class="g-config-row">
-      <label for="g-input-ingresos">Ingresos mensuales</label>
-      <div class="g-config-input">
-        <input id="g-input-ingresos" type="text" inputmode="decimal" placeholder="0,00 €" />
-        <button id="g-btn-ingresos-guardar">Añadir ingreso</button>
-      </div>
+<div class="gastos-config panel">
+  <div class="g-config-row">
+    <label for="g-input-ingresos">Ingresos mensuales</label>
+    <div class="g-config-input">
+      <input id="g-input-ingresos" type="text" inputmode="decimal" placeholder="0,00 €" />
+      <button id="g-btn-ingresos-guardar">Añadir ingreso</button>
     </div>
-    <div class="g-kpis">
-      <div id="g-kpi-comprometido" class="g-kpi-line">
-        0% de tus ingresos está comprometido en gastos fijos.
-      </div>
-      <div id="g-kpi-esencial" class="g-kpi-line">
-        Esencial: 0% · Prescindible: 0%.
-      </div>
-    </div>
-    <div id="ingresos-list-body" class="gastos-list-body"></div>
-
   </div>
+
+  <div class="g-kpis">
+    <div id="g-kpi-comprometido" class="g-kpi-line">
+      0% de tus ingresos está comprometido en gastos fijos.
+    </div>
+    <div id="g-kpi-esencial" class="g-kpi-line">
+      Esencial: 0% · Prescindible: 0%.
+    </div>
+  </div>
+  <div id="ingresos-list-body" class="gastos-list-body"></div>
+</div>
 
   <div class="gastos-list panel">
     <div class="gastos-list-header">
@@ -182,6 +182,13 @@
     <div id="g-categorias-chips" class="g-categorias-chips"></div>
     <div id="gastos-list-body" class="gastos-list-body muted">
       Aún no has añadido ningún gasto fijo.
+    </div>
+  </div>
+  <div class="gastos-inversion panel">
+    <label for="g-input-inversion">Inversión mensual</label>
+    <div class="g-config-input">
+      <input id="g-input-inversion" type="text" inputmode="decimal" placeholder="0,00 €" />
+      <button id="g-btn-inversion-guardar">Guardar inversión</button>
     </div>
   </div>
 

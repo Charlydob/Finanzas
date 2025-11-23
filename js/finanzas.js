@@ -128,20 +128,37 @@ function saveOrigenCuentas(ids) {
     }
   }
 
-  function ensureGastosState(){
-    if (!gastos || typeof gastos !== "object"){
-      gastos = JSON.parse(JSON.stringify(DEFAULT_GASTOS));
-    }
-    if (!Array.isArray(gastos.gastosFijos))   gastos.gastosFijos   = [];
-    if (!Array.isArray(gastos.ingresosFijos)) gastos.ingresosFijos = [];
-    if (!Array.isArray(gastos.historial))     gastos.historial     = [];
-    if (typeof gastos.ingresosMensuales !== "number"){
-      gastos.ingresosMensuales = esToNumberLocal(gastos.ingresosMensuales);
-    }
-    if (!Number.isFinite(gastos.ingresosMensuales)){
-      gastos.ingresosMensuales = 0;
-    }
+function ensureGastosState(){
+  if (!gastos || typeof gastos !== "object"){
+    gastos = JSON.parse(JSON.stringify(DEFAULT_GASTOS));
   }
+  if (!Array.isArray(gastos.gastosFijos))    gastos.gastosFijos    = [];
+  if (!Array.isArray(gastos.ingresosFijos))  gastos.ingresosFijos  = [];
+  if (!Array.isArray(gastos.historial))      gastos.historial      = [];
+  if (!Array.isArray(gastos.inversionesFijas)) gastos.inversionesFijas = [];
+
+  if (typeof gastos.ingresosMensuales !== "number"){
+    gastos.ingresosMensuales = esToNumberLocal(gastos.ingresosMensuales);
+  }
+  if (!Number.isFinite(gastos.ingresosMensuales)){
+    gastos.ingresosMensuales = 0;
+  }
+
+  if (typeof gastos.inversionMensual !== "number"){
+    gastos.inversionMensual = esToNumberLocal(gastos.inversionMensual);
+  }
+  if (!Number.isFinite(gastos.inversionMensual)){
+    gastos.inversionMensual = 0;
+  }
+
+  console.log("〽️ [INV] ensureGastosState ->", {
+    inversionMensual: gastos.inversionMensual,
+    inversionesFijas: gastos.inversionesFijas
+  });
+}
+
+
+
   function loadRegistrosLocal(){
     // 1º: intentar usar snapshot de app.js
     if (typeof window !== "undefined" && typeof window.getFinanzasSnapshot === "function") {
@@ -185,8 +202,14 @@ function getSortedRegistrosLocal(){
   const $gSemiIngresos       = document.getElementById("g-semi-ingresos");
   const $gSemiGastos         = document.getElementById("g-semi-gastos");
   const $gSemiResto          = document.getElementById("g-semi-resto");
+  const $gSemiInversion      = document.getElementById("g-semi-inversion");
   const $gInputIngresos      = document.getElementById("g-input-ingresos");
+  const $gInputInversion     = document.getElementById("g-input-inversion");
+
   const $gBtnIngresosGuardar = document.getElementById("g-btn-ingresos-guardar");
+  const $gBtnInversionGuardar = document.getElementById("g-btn-inversion-guardar");
+const $inversionPanel       = document.querySelector(".gastos-inversion");
+
   const $gKpiComprometido    = document.getElementById("g-kpi-comprometido");
   const $gKpiEsencial        = document.getElementById("g-kpi-esencial");
   const $gBtnNuevoGasto      = document.getElementById("g-btn-nuevo-gasto");
@@ -438,7 +461,7 @@ function computeGastosMetrics(){
   console.log("----- [GASTOS] computeGastosMetrics INICIO -----");
   console.log("[GASTOS] estado bruto de gastos:", JSON.stringify(g));
 
-  // ingresos desde lista de ingresos fijos; si no hay, usar ingresosMensuales
+  // ingresos: lista de ingresos fijos o ingresosMensuales
   let ingresos = 0;
   let ingresosFijosTotal = 0;
 
@@ -461,6 +484,7 @@ function computeGastosMetrics(){
     ingresosMensualesRaw: g.ingresosMensuales
   });
 
+  // gastos fijos
   let gastosFijos    = 0;
   let esenciales     = 0;
   let prescindibles  = 0;
@@ -484,6 +508,7 @@ function computeGastosMetrics(){
     prescindibles
   });
 
+  // gasto variable desde cuentas
   const gVarInfo = computeGastoVariableMesActual();
   console.log("[GASTOS] datos de gastoVariable desde computeGastoVariableMesActual:", gVarInfo);
 
@@ -491,9 +516,26 @@ function computeGastosMetrics(){
   const gVarRaw  = gVarInfo && gVarInfo.gastoVariable;
   const gastoVariable = Number.isFinite(gVarRaw) ? gVarRaw : 0;
 
-  const gastosTotales = gastosFijos + gastoVariable;
-  const saldoFinal    = ingresos - gastosTotales;
+  // 🔹 inversión: suma de inversionesFijas; si no hay, usamos inversionMensual
+  let inversionTotal = 0;
+  if (Array.isArray(g.inversionesFijas) && g.inversionesFijas.length){
+    g.inversionesFijas.forEach(inv => {
+      const imp = esToNumberLocal(inv.importe);
+      inversionTotal += imp;
+    });
+  } else {
+    inversionTotal = esToNumberLocal(g.inversionMensual);
+  }
 
+  if (!Number.isFinite(inversionTotal)) inversionTotal = 0;
+
+  console.log("〽️ [INV] computeGastosMetrics -> inversionTotal:", inversionTotal, {
+    inversionesFijas: g.inversionesFijas,
+    inversionMensualRaw: g.inversionMensual
+  });
+
+  const gastosTotales = gastosFijos + gastoVariable + inversionTotal;
+  const saldoFinal    = ingresos - gastosTotales;
 
   const pctComprometido = ingresos > 0 ? (gastosFijos / ingresos) : 0;
   const totalEsencial   = esenciales + prescindibles;
@@ -504,98 +546,151 @@ function computeGastosMetrics(){
     ingresos,
     gastosFijos,
     gastoVariable,
+    inversion: inversionTotal,
     gastosTotales,
     saldoFinal,
     pctComprometido,
     pctEsencial
   };
 
-  console.log("[GASTOS] RESUMEN FINAL:", {
-    claveMes,
-    ingresos,
-    gastosFijos,
-    gastoVariable,
-    gastosTotales,
-    saldoFinal,
-    pctComprometido,
-    pctEsencial
-  });
+  console.log("[GASTOS] RESUMEN FINAL:", result);
   console.log("----- [GASTOS] computeGastosMetrics FIN -----");
 
   return result;
 }
 
 
-  function drawGastosSemicircle(ingresos, gastosTotales){
-    if (!$gSemiCanvas) return;
-    const canvas = $gSemiCanvas;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
 
-    const cx = w / 2;
-    const radius = Math.min(w, h * 2) / 2 - 6;
-    const cy = h - 4;
+function drawGastosSemicircle(ingresos, gastosSinInversion, inversion){
+  if (!$gSemiCanvas) return;
+  const canvas = $gSemiCanvas;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
 
-    ctx.lineCap = "round";
-    ctx.lineWidth = 6;
+  ingresos          = esToNumberLocal(ingresos);
+  gastosSinInversion= esToNumberLocal(gastosSinInversion);
+  inversion         = esToNumberLocal(inversion);
 
-    // pista base gris
-    ctx.strokeStyle = "rgba(30,41,59,0.7)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, Math.PI, 0, false);
-    ctx.stroke();
+  const gastoReal = Math.max(0, gastosSinInversion);
+  const invReal   = Math.max(0, inversion);
+  const totalOut  = gastoReal + invReal;
 
-    // nada
-    if (ingresos <= 0 && gastosTotales <= 0){
-      return;
-    }
+  console.log("〽️ [INV] drawGastosSemicircle ->", {
+    ingresos,
+    gastoReal,
+    invReal,
+    totalOut
+  });
 
-    // solo gastos, sin ingresos -> todo rojo
-    if (ingresos <= 0 && gastosTotales > 0){
-      ctx.strokeStyle = "rgba(248,113,113,0.95)";
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2;
+  const radius = Math.min(w, h * 2) / 2 - 6;
+  const cy = h - 4;
+
+  ctx.lineCap = "round";
+  ctx.lineWidth = 6;
+
+  // pista base gris
+  ctx.strokeStyle = "rgba(30,41,59,0.7)";
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, Math.PI, 0, false);
+  ctx.stroke();
+
+  // nada
+  if (ingresos <= 0 && totalOut <= 0){
+    return;
+  }
+
+  // sin ingresos pero con salidas -> todo semicírculo ocupado
+  if (ingresos <= 0 && totalOut > 0){
+    const remAngle = Math.PI;
+    const invShare   = totalOut > 0 ? (invReal   / totalOut) : 0;
+    const gastoShare = totalOut > 0 ? (gastoReal / totalOut) : 0;
+
+    let start = Math.PI;
+
+    const invAngle = remAngle * invShare;
+    const gasAngle = remAngle * gastoShare;
+
+    if (invAngle > 0){
+      ctx.strokeStyle = "rgba(168,85,247,0.95)"; // violeta inversión
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, Math.PI, 0, false);
+      ctx.arc(cx, cy, radius, start, start + invAngle, false);
       ctx.stroke();
-      return;
+      start += invAngle;
     }
 
-    // ingresos > 0
-    let ratio = gastosTotales / ingresos;
-    if (!Number.isFinite(ratio)) ratio = 0;
-    ratio = Math.max(0, ratio);
-
-    // si gasta >= 100% -> todo rojo
-    if (ratio >= 1){
-      ctx.strokeStyle = "rgba(248,113,113,0.95)";
+    if (gasAngle > 0){
+      ctx.strokeStyle = "rgba(248,113,113,0.95)"; // rojo gastos
       ctx.beginPath();
-      ctx.arc(cx, cy, radius, Math.PI, 0, false);
+      ctx.arc(cx, cy, radius, start, start + gasAngle, false);
       ctx.stroke();
-      return;
     }
+    return;
+  }
 
-    // parte verde (lo que queda), parte roja (lo gastado)
-    const greenShare = 1 - ratio;
-    const redShare   = ratio;
+  // ingresos > 0
+  let ratioOut = totalOut / ingresos;
+  if (!Number.isFinite(ratioOut)) ratioOut = 0;
+  ratioOut = Math.max(0, ratioOut);
 
-    const greenAngle = Math.PI * greenShare;
-    const redAngle   = Math.PI * redShare;
+  let greenShare, invShare, gastoShare;
 
-    // verde desde la izquierda hacia donde termina el verde
+  if (ratioOut >= 1){
+    // no queda verde, todo ocupado por inversión + gastos
+    greenShare = 0;
+    const sum = totalOut || 1;
+    invShare   = invReal   / sum;
+    gastoShare = gastoReal / sum;
+  } else {
+    greenShare = 1 - ratioOut;
+    const outInside = ratioOut || 1;
+    const invRel   = (invReal   / ingresos) / outInside;
+    const gasRel   = (gastoReal / ingresos) / outInside;
+    invShare   = invRel;
+    gastoShare = gasRel;
+  }
+
+  const greenAngle = Math.PI * greenShare;
+  const outAngle   = Math.PI - greenAngle;
+
+  let start = Math.PI;
+
+  // verde (lo que queda)
+  if (greenAngle > 0){
     ctx.strokeStyle = "rgba(34,197,94,0.95)";
     ctx.beginPath();
-ctx.arc(cx, cy, radius, Math.PI, Math.PI + greenAngle, false);
+    ctx.arc(cx, cy, radius, start, start + greenAngle, false);
     ctx.stroke();
+    start += greenAngle;
+  }
 
-    // rojo desde el fin del verde hasta la derecha
+  // segmento de inversión (violeta)
+  const invAngle = outAngle * invShare;
+  if (invAngle > 0){
+    ctx.strokeStyle = "rgba(168,85,247,0.95)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + invAngle, false);
+    ctx.stroke();
+    start += invAngle;
+  }
+
+  // segmento de gastos (rojo)
+  const gasAngle = outAngle * gastoShare;
+  if (gasAngle > 0){
     ctx.strokeStyle = "rgba(248,113,113,0.95)";
     ctx.beginPath();
-ctx.arc(cx, cy, radius, Math.PI + greenAngle, 0, false);
+    ctx.arc(cx, cy, radius, start, start + gasAngle, false);
     ctx.stroke();
   }
+}
+
+
+
 function updateOrigenLabel(){
   if (!$lblOrigenGastoVar) return;
   const origenIds = loadOrigenCuentas();
@@ -975,72 +1070,83 @@ function renderGastosPanel(){
   ensureGastosState();
 
   const m = computeGastosMetrics();
-  console.log("[GASTOS] renderGastosPanel metrics:", m);
+  console.log("〽️ [INV] renderGastosPanel metrics:", m);
 
   const {
     ingresos,
     gastosFijos,
     gastoVariable,
+    inversion = 0,
     gastosTotales,
     saldoFinal,
     pctComprometido,
     pctEsencial
   } = m;
 
-    if ($gInputIngresos){
-      $gInputIngresos.value = ingresos > 0 ? numberToEsLocal(ingresos) : "";
-    }
-
-    $gBalanceFinal.textContent = numberToEsLocal(saldoFinal);
-    $gBalanceFinal.classList.toggle("g-balance-final--negativo", saldoFinal < 0);
-    $gBalanceFinal.classList.toggle("g-balance-final--positivo", saldoFinal > 0);
-
-    if ($gBalanceDetalle){
-      $gBalanceDetalle.textContent =
-        `Ing: ${numberToEsLocal(ingresos)} · Gastos fijos: ${numberToEsLocal(gastosFijos)} · Gasto variable: ${numberToEsLocal(gastoVariable)}`;
-    }
-
-    if ($gLabelIngresos) $gLabelIngresos.textContent = numberToEsLocal(ingresos);
-    if ($gLabelGastos)   $gLabelGastos.textContent   = numberToEsLocal(gastosFijos);
-
-    if ($gBarIngresos && $gBarGastos){
-      const maxVal = Math.max(ingresos, gastosFijos, 0);
-      const wIng = maxVal > 0 && ingresos > 0 ? Math.max(8, ingresos/maxVal * 100) : 0;
-      const wGas = maxVal > 0 && gastosFijos > 0 ? Math.max(8, gastosFijos/maxVal * 100) : 0;
-      $gBarIngresos.style.width = wIng + "%";
-      $gBarGastos.style.width   = wGas + "%";
-    }
-
-    if ($gSemiIngresos) $gSemiIngresos.textContent = numberToEsLocal(ingresos);
-    if ($gSemiGastos)   $gSemiGastos.textContent   = numberToEsLocal(gastosTotales);
-    if ($gSemiResto){
-      $gSemiResto.textContent = numberToEsLocal(saldoFinal);
-      const parent = $gSemiResto.parentElement;
-      if (parent){
-        if (saldoFinal < 0) parent.classList.add("negativo");
-        else parent.classList.remove("negativo");
-      }
-    }
-
-    drawGastosSemicircle(ingresos, gastosTotales);
-
-    if ($gKpiComprometido){
-      const pct = pctComprometido || 0;
-      $gKpiComprometido.textContent =
-        `${pctToEsLocal(pct)} de tus ingresos está comprometido en gastos fijos.`;
-    }
-
-    if ($gKpiEsencial){
-      const pctE = pctEsencial || 0;
-      const pctP = 1 - pctE;
-      $gKpiEsencial.textContent =
-        `Esencial: ${pctToEsLocal(pctE)} · Prescindible: ${pctToEsLocal(pctP)}.`;
-    }
-
-    renderIngresosList();
-    renderGastosList();
-    renderGastosHistorial();
+  if ($gInputIngresos){
+    $gInputIngresos.value = ingresos > 0 ? numberToEsLocal(ingresos) : "";
   }
+  if ($gInputInversion){
+    $gInputInversion.value = inversion > 0 ? numberToEsLocal(inversion) : "";
+  }
+
+  $gBalanceFinal.textContent = numberToEsLocal(saldoFinal);
+  $gBalanceFinal.classList.toggle("g-balance-final--negativo", saldoFinal < 0);
+  $gBalanceFinal.classList.toggle("g-balance-final--positivo", saldoFinal > 0);
+
+  if ($gBalanceDetalle){
+    $gBalanceDetalle.textContent =
+      `Ing: ${numberToEsLocal(ingresos)} · Fijos: ${numberToEsLocal(gastosFijos)} · Var: ${numberToEsLocal(gastoVariable)} · Inv: ${numberToEsLocal(inversion)}`;
+  }
+
+  if ($gLabelIngresos) $gLabelIngresos.textContent = numberToEsLocal(ingresos);
+  if ($gLabelGastos)   $gLabelGastos.textContent   = numberToEsLocal(gastosFijos);
+
+  if ($gBarIngresos && $gBarGastos){
+    const maxVal = Math.max(ingresos, gastosFijos, 0);
+    const wIng = maxVal > 0 && ingresos > 0 ? Math.max(8, ingresos/maxVal * 100) : 0;
+    const wGas = maxVal > 0 && gastosFijos > 0 ? Math.max(8, gastosFijos/maxVal * 100) : 0;
+    $gBarIngresos.style.width = wIng + "%";
+    $gBarGastos.style.width   = wGas + "%";
+  }
+
+  if ($gSemiIngresos)  $gSemiIngresos.textContent  = numberToEsLocal(ingresos);
+  if ($gSemiGastos)    $gSemiGastos.textContent    = numberToEsLocal(gastosTotales);
+  if ($gSemiInversion) $gSemiInversion.textContent = numberToEsLocal(inversion);
+  if ($gSemiResto){
+    $gSemiResto.textContent = numberToEsLocal(saldoFinal);
+    const parent = $gSemiResto.parentElement;
+    if (parent){
+      if (saldoFinal < 0) parent.classList.add("negativo");
+      else parent.classList.remove("negativo");
+    }
+  }
+
+  // gastos sin inversión = fijos + variable
+  drawGastosSemicircle(ingresos, gastosFijos + gastoVariable, inversion);
+
+  if ($gKpiComprometido){
+    const pct = pctComprometido || 0;
+    $gKpiComprometido.textContent =
+      `${pctToEsLocal(pct)} de tus ingresos está comprometido en gastos fijos.`;
+  }
+
+  if ($gKpiEsencial){
+    const pctE = pctEsencial || 0;
+    const pctP = 1 - pctE;
+    $gKpiEsencial.textContent =
+      `Esencial: ${pctToEsLocal(pctE)} · Prescindible: ${pctToEsLocal(pctP)}.`;
+  }
+
+  renderIngresosList();
+  renderGastosList();
+  renderInversionesList();   // 🔹 NUEVO
+  renderGastosHistorial();
+}
+
+
+
+
 
   // ---- Cloud sólo de gastos ----
   let cloudRef = null;
@@ -1120,6 +1226,11 @@ function renderGastosPanel(){
       closeModal(overlay);
     });
 
+
+if ($gBtnInversionGuardar){
+  $gBtnInversionGuardar.addEventListener("click", onGuardarInversionMensual);
+}
+
     const btnSave = document.createElement("button");
     btnSave.type = "button";
     btnSave.className = "g-modal-btn g-modal-btn--primary";
@@ -1161,6 +1272,221 @@ function renderGastosPanel(){
 
     inputNombre.focus();
   }
+
+function onGuardarInversionMensual(){
+  ensureGastosState();
+
+  console.log("〽️ [INV] onGuardarInversionMensual -> abrir modal nueva inversión");
+
+  const { overlay, modal } = createModalBase("Nueva inversión");
+
+  const rowNombre = document.createElement("div");
+  rowNombre.className = "g-modal-row";
+  const labelNombre = document.createElement("label");
+  labelNombre.textContent = "Nombre de la inversión";
+  const inputNombre = document.createElement("input");
+  inputNombre.type = "text";
+  inputNombre.placeholder = "ETF, Bitcoin, fondo, etc.";
+  rowNombre.appendChild(labelNombre);
+  rowNombre.appendChild(inputNombre);
+
+  const rowImporte = document.createElement("div");
+  rowImporte.className = "g-modal-row";
+  const labelImporte = document.createElement("label");
+  labelImporte.textContent = "Importe mensual (€)";
+  const inputImporte = document.createElement("input");
+  inputImporte.type = "number";
+  inputImporte.inputMode = "decimal";
+  inputImporte.placeholder = "0,00";
+  rowImporte.appendChild(labelImporte);
+  rowImporte.appendChild(inputImporte);
+
+  const actions = document.createElement("div");
+  actions.className = "g-modal-actions";
+
+  const btnCancel = document.createElement("button");
+  btnCancel.type = "button";
+  btnCancel.className = "g-modal-btn g-modal-btn--ghost";
+  btnCancel.textContent = "Cancelar";
+  btnCancel.addEventListener("click", () => {
+    console.log("〽️ [INV] onGuardarInversionMensual -> cancelar");
+    closeModal(overlay);
+  });
+
+  const btnSave = document.createElement("button");
+  btnSave.type = "button";
+  btnSave.className = "g-modal-btn g-modal-btn--primary";
+  btnSave.textContent = "Guardar";
+  btnSave.addEventListener("click", () => {
+    const nombre  = inputNombre.value.trim();
+    const importe = esToNumberLocal(inputImporte.value);
+    if (!nombre || !importe){
+      console.log("〽️ [INV] onGuardarInversionMensual -> datos inválidos", {
+        nombre,
+        importeRaw: inputImporte.value
+      });
+      return;
+    }
+
+    if (!Array.isArray(gastos.inversionesFijas)){
+      gastos.inversionesFijas = [];
+    }
+
+    gastos.inversionesFijas.push({
+      id     : Date.now(),
+      nombre : nombre,
+      importe: importe
+    });
+
+    // recalculamos inversionMensual como suma (por compatibilidad)
+    let totalInv = 0;
+    gastos.inversionesFijas.forEach(inv => {
+      totalInv += esToNumberLocal(inv.importe);
+    });
+    gastos.inversionMensual = totalInv;
+
+    console.log("〽️ [INV] onGuardarInversionMensual -> guardado", {
+      nuevo: { nombre, importe },
+      inversionMensual: gastos.inversionMensual,
+      inversionesFijas: gastos.inversionesFijas
+    });
+
+    if ($gInputInversion){
+      $gInputInversion.value = numberToEsLocal(gastos.inversionMensual);
+    }
+
+    saveLocalGastos();
+    syncGastosToCloud();
+    renderGastosPanel();
+    closeModal(overlay);
+  });
+
+  actions.appendChild(btnCancel);
+  actions.appendChild(btnSave);
+
+  modal.appendChild(rowNombre);
+  modal.appendChild(rowImporte);
+  modal.appendChild(actions);
+
+  inputNombre.focus();
+}
+function renderInversionesList(){
+  ensureGastosState();
+  if (!$inversionPanel){
+    console.log("〽️ [INV] renderInversionesList -> sin panel .gastos-inversion");
+    return;
+  }
+
+  const items = Array.isArray(gastos.inversionesFijas) ? gastos.inversionesFijas : [];
+  console.log("〽️ [INV] renderInversionesList -> items:", items);
+
+  // borrar lista anterior (si existe)
+  const oldList = $inversionPanel.querySelector(".inversiones-list-body");
+  if (oldList){
+    oldList.remove();
+  }
+
+  const list = document.createElement("div");
+  list.className = "gastos-list-body inversiones-list-body";
+
+  if (!items.length){
+    list.classList.add("muted");
+    list.textContent = "Aún no has añadido ninguna inversión.";
+    $inversionPanel.appendChild(list);
+    return;
+  }
+
+  items.forEach((item, idx) => {
+    const row = document.createElement("div");
+    row.className = "gasto-item inversion-item";
+
+    const main = document.createElement("div");
+    main.className = "gasto-main";
+
+    const titleLine = document.createElement("div");
+    titleLine.className = "gasto-title-line";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "gasto-nombre";
+    nameSpan.textContent = item.nombre || `Inversión ${idx+1}`;
+    titleLine.appendChild(nameSpan);
+
+    main.appendChild(titleLine);
+    row.appendChild(main);
+
+    const importeSpan = document.createElement("div");
+    importeSpan.className = "gasto-importe";
+    importeSpan.textContent = numberToEsLocal(esToNumberLocal(item.importe));
+    row.appendChild(importeSpan);
+
+    const menuBtn = document.createElement("button");
+    menuBtn.className = "gasto-menu-btn";
+    menuBtn.type = "button";
+    menuBtn.textContent = "⋯";
+    menuBtn.addEventListener("click", () => {
+      handleInversionMenu(idx);
+    });
+    row.appendChild(menuBtn);
+
+    list.appendChild(row);
+  });
+
+  $inversionPanel.appendChild(list);
+}
+function handleInversionMenu(idx){
+  ensureGastosState();
+  const items = Array.isArray(gastos.inversionesFijas) ? gastos.inversionesFijas : [];
+  const item = items[idx];
+  if (!item){
+    console.log("〽️ [INV] handleInversionMenu -> item no encontrado para idx", idx);
+    return;
+  }
+
+  const action = window.prompt("Escribe 1 para editar o 2 para eliminar esta inversión", "1");
+  console.log("〽️ [INV] handleInversionMenu -> acción elegida:", action, "item:", item);
+
+  if (action === "2"){
+    if (!window.confirm("¿Eliminar esta inversión fija?")) return;
+    gastos.inversionesFijas.splice(idx, 1);
+
+    // recalcular total inversión
+    let totalInv = 0;
+    gastos.inversionesFijas.forEach(inv => {
+      totalInv += esToNumberLocal(inv.importe);
+    });
+    gastos.inversionMensual = totalInv;
+
+    console.log("〽️ [INV] handleInversionMenu -> eliminada. Nuevo total inversión:", gastos.inversionMensual);
+
+    saveLocalGastos();
+    syncGastosToCloud();
+    renderGastosPanel();
+    return;
+  }
+
+  if (action !== "1") return;
+
+  const nombre = window.prompt("Nombre de la inversión", item.nombre || "") || item.nombre;
+  const importeStr = window.prompt("Importe mensual (€)", String(item.importe || "")) || item.importe;
+
+  item.nombre  = nombre;
+  item.importe = esToNumberLocal(importeStr);
+
+  let totalInv = 0;
+  gastos.inversionesFijas.forEach(inv => {
+    totalInv += esToNumberLocal(inv.importe);
+  });
+  gastos.inversionMensual = totalInv;
+
+  console.log("〽️ [INV] handleInversionMenu -> editada", {
+    item,
+    inversionMensual: gastos.inversionMensual
+  });
+
+  saveLocalGastos();
+  syncGastosToCloud();
+  renderGastosPanel();
+}
 
 
   function onNuevoGastoFijo(){
@@ -1307,7 +1633,7 @@ function renderGastosPanel(){
 const KEY_ORIGEN_FINANZAS = "mis_cuentas_fase1_origen_cuentas_finanzas";
 
   // ---- Init ----
-  function initFinanzas(){
+function initFinanzas(){
   loadLocalGastos();
   ensureGastosState();
   loadRegistrosLocal();
@@ -1315,41 +1641,51 @@ const KEY_ORIGEN_FINANZAS = "mis_cuentas_fase1_origen_cuentas_finanzas";
   updateOrigenLabel();
   renderGastosPanel();
 
-    if ($gBtnIngresosGuardar){
-      $gBtnIngresosGuardar.addEventListener("click", onGuardarIngresosMensuales);
-    }
-    if ($gInputIngresos){
-      $gInputIngresos.addEventListener("change", onGuardarIngresosMensuales);
-    }
-      if ($btnOrigenGastoVar){
+  if ($gBtnIngresosGuardar){
+    $gBtnIngresosGuardar.addEventListener("click", onGuardarIngresosMensuales);
+  }
+  if ($gInputIngresos){
+    $gInputIngresos.addEventListener("change", onGuardarIngresosMensuales);
+  }
+
+  // 🔹 botón inversión
+if ($gBtnInversionGuardar){
+  console.log("〽️ [INV] initFinanzas -> listener en g-btn-inversion-guardar");
+  $gBtnInversionGuardar.addEventListener("click", onGuardarInversionMensual);
+}
+  if ($gInputInversion){
+    $gInputInversion.addEventListener("change", onGuardarInversionMensual);
+  }
+
+  if ($btnOrigenGastoVar){
     $btnOrigenGastoVar.addEventListener("click", onSelectOrigenCuentas);
   }
-    if ($gBtnNuevoGasto){
-      $gBtnNuevoGasto.addEventListener("click", onNuevoGastoFijo);
-    }
-    if ($gBtnCerrarMes){
-      $gBtnCerrarMes.addEventListener("click", onRegistrarMesGastos);
-    }
-
-    if (uid && window.firebase){
-      attachGastosCloud();
-    }
-
-    // escuchar login de app.js
-    if (typeof window !== "undefined" && typeof window.addEventListener === "function"){
-      window.addEventListener("finanzas-login", (ev) => {
-        uid = ev.detail && ev.detail.uid ? ev.detail.uid : null;
-        if (uid && window.firebase){
-          attachGastosCloud();
-        }
-      });
-    }
-
-    // exponer para que app.js pueda llamar al cambiar de pestaña
-    if (typeof window !== "undefined"){
-      window.renderGastosPanel = renderGastosPanel;
-    }
+  if ($gBtnNuevoGasto){
+    $gBtnNuevoGasto.addEventListener("click", onNuevoGastoFijo);
   }
+  if ($gBtnCerrarMes){
+    $gBtnCerrarMes.addEventListener("click", onRegistrarMesGastos);
+  }
+
+  if (uid && window.firebase){
+    attachGastosCloud();
+  }
+
+  // escuchar login de app.js
+  if (typeof window !== "undefined" && typeof window.addEventListener === "function"){
+    window.addEventListener("finanzas-login", (ev) => {
+      uid = ev.detail && ev.detail.uid ? ev.detail.uid : null;
+      if (uid && window.firebase){
+        attachGastosCloud();
+      }
+    });
+  }
+
+  // exponer para que app.js pueda llamar al cambiar de pestaña
+  if (typeof window !== "undefined"){
+    window.renderGastosPanel = renderGastosPanel;
+  }
+}
 
   initFinanzas();
 })();
