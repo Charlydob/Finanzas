@@ -31,7 +31,7 @@
   </div>
 </div>
   <!-- NAV TABS GLOBAL -->
-      <nav class="tabs">
+ <nav class="tabs">
     <button class="tab tab-cuentas active" data-tab="cuentas" aria-label="Cuentas">
       <span class="tab-icon">€</span>
     </button>
@@ -40,6 +40,10 @@
     </button>
     <button class="tab tab-gastos" data-tab="gastos" aria-label="Gastos mensuales">
       <span class="tab-icon">💸</span>
+    </button>
+    <!-- NUEVA PESTAÑA MERCADOS -->
+    <button class="tab tab-mercados" data-tab="mercados" aria-label="Mercados">
+      <span class="tab-icon">📈</span>
     </button>
   </nav>
 
@@ -199,6 +203,56 @@
     </div>
     <div id="g-historial-list" class="g-historial-list muted">
       Sin datos todavía.
+    </div>
+  </div>
+</section>
+<!-- TAB MERCADOS -->
+<section id="tab-mercados" class="panel-mercados tab-panel" hidden>
+  <div class="mercados-header">
+    <div class="mercados-title">Conversor cripto / bolsa</div>
+  </div>
+
+  <div class="mercados-config panel">
+    <div class="merc-row">
+      <label for="merc-tipo">Tipo de activo</label>
+      <select id="merc-tipo">
+        <option value="crypto">Cripto</option>
+        <option value="stock">Acción / ETF / Fondo</option>
+      </select>
+    </div>
+
+    <div class="merc-row">
+      <label for="merc-simbolo">Símbolo / Ticker</label>
+      <input id="merc-simbolo" type="text" placeholder="BTC, ETH, NVDA, IE00B03HCZ61..." />
+    </div>
+
+    <div class="merc-row">
+      <label for="merc-cantidad">Cantidad en €</label>
+      <input id="merc-cantidad" type="text" inputmode="decimal" placeholder="0,00 €" />
+    </div>
+
+    <div class="merc-row merc-row-precio-manual">
+      <label for="merc-precio-manual">Precio actual (€/u) si NO es cripto (opcional)</label>
+      <input id="merc-precio-manual" type="text" inputmode="decimal" placeholder="0,00 €" />
+    </div>
+
+    <div class="merc-actions">
+      <button id="merc-btn-calcular">Calcular</button>
+      <button id="merc-btn-guardar" class="btn-secondary">Guardar en lista</button>
+    </div>
+
+    <div id="merc-resultado" class="merc-resultado muted">
+      Introduce datos y pulsa “Calcular”.
+    </div>
+  </div>
+
+  <div class="mercados-list panel">
+    <div class="mercados-list-header">
+      <div class="mercados-list-title">Seguimiento rápido</div>
+      <button id="merc-btn-refrescar">Actualizar todos</button>
+    </div>
+    <div id="mercados-list-body" class="mercados-list-body muted">
+      No has guardado ningún activo todavía.
     </div>
   </div>
 </section>
@@ -400,5 +454,6 @@
   <script src="js/app.js"></script>
   <script src="js/objetivos.js"></script>
   <script src="js/finanzas.js"></script>
+    <script src="js/mercados.js"></script>
 </body>
 </html>
