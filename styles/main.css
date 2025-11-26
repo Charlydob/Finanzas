@@ -1968,7 +1968,14 @@ margin-top: 0px;
   color: #9ca3af;
 }
 
-.yt-top {
+/* Panel principal YouTube */
+.yt-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.yt-main-top {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -1982,8 +1989,8 @@ margin-top: 0px;
 
 .yt-ring {
   --pct: 0deg;
-  width: 86px;
-  height: 86px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   background: conic-gradient(#22c55e var(--pct), rgba(15, 23, 42, 0.96) 0deg);
   display: flex;
@@ -1993,8 +2000,8 @@ margin-top: 0px;
 }
 
 .yt-ring-inner {
-  width: 62px;
-  height: 62px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   background: rgba(15, 23, 42, 0.98);
   display: flex;
@@ -2031,10 +2038,13 @@ margin-top: 0px;
   color: var(--bad);
 }
 
-.yt-form {
+/* Formulario compacto debajo del aro */
+.yt-main-form {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .yt-row {
@@ -2066,15 +2076,55 @@ margin-top: 0px;
   border-radius: 999px;
 }
 
+/* Panel gráficos */
 .yt-charts {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+.yt-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
 .yt-chart-title {
   font-size: 13px;
   font-weight: 500;
+}
+
+.yt-chart-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.yt-chart-tab {
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.yt-chart-tab.active {
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+
+.yt-chart-body {
+  margin-top: 4px;
+}
+
+#yt-chart-money {
+  display: block;
+}
+
+#yt-chart-videos {
+  display: none;
 }
 
 .yt-chart-legend {
@@ -2099,4 +2149,95 @@ margin-top: 0px;
 
 .yt-legend-food::before {
   background: #f97373;
+}
+/* Lista de registros */
+
+.yt-registros {
+  border-top: 1px solid var(--line-soft);
+  margin-top: 6px;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yt-registros-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.yt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.yt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.95);
+}
+
+.yt-item-empty {
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+}
+
+.yt-item-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.yt-item-badge {
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.yt-item-badge-ingreso {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.yt-item-badge-comida {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fb7185;
+}
+
+.yt-item-amount {
+  font-weight: 500;
+}
+
+.yt-item-right {
+  display: flex;
+  gap: 4px;
+}
+
+.yt-item-btn {
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.yt-item-btn-del {
+  border-color: rgba(248, 113, 113, 0.4);
 }

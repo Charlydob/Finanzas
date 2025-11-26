@@ -1,5 +1,5 @@
 <!doctype html>
-< lang="es">
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no" />
@@ -10,7 +10,7 @@
 
   <link rel="stylesheet" href="styles/main.css" />
 </head>
-<>
+<body>
   <main>
   <!-- 0️⃣ LOGIN SIMPLE -->
 <div id="login-overlay" class="login-overlay" aria-hidden="true">
@@ -88,7 +88,6 @@
 
     <div id="dashboard" class="cards"></div>
   </section>
-
 <!-- 2️⃣TAB OBJETIVOS -->
 <section id="tab-objetivos" class=" panel-objetivos tab-panel" hidden>
       <div class="objetivos-header">
@@ -266,70 +265,81 @@
     <div id="yt-mes-label" class="yt-mes-label">Mes actual</div>
   </div>
 
-  <div class="yt-top panel">
-    <div class="yt-ring-wrapper">
-      <div id="yt-ring" class="yt-ring">
-        <div class="yt-ring-inner">
-          <span id="yt-ring-text">0%</span>
+  <!-- Panel principal: aro + resumen + inputs -->
+  <div class="panel yt-main">
+    <div class="yt-main-top">
+      <div class="yt-ring-wrapper">
+        <div id="yt-ring" class="yt-ring">
+          <div class="yt-ring-inner">
+            <span id="yt-ring-text">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="yt-summary">
+        <label class="yt-field-label" for="yt-mes">Mes</label>
+        <input id="yt-mes" type="month" />
+
+        <div class="yt-summary-line">YouTube: <span id="yt-ingreso">0,00 €</span></div>
+        <div class="yt-summary-line">Comida: <span id="yt-comida">0,00 €</span></div>
+        <div class="yt-summary-line yt-summary-rest">
+          Te queda: <span id="yt-resto">0,00 €</span>
+        </div>
+        <div class="yt-summary-line">Vídeos: <span id="yt-videos-label">0</span></div>
+      </div>
+    </div>
+
+    <div class="yt-main-form">
+      <div class="yt-row">
+        <label for="yt-input-ingreso">Añadir pago de YouTube</label>
+        <div class="yt-input-wrap">
+          <input id="yt-input-ingreso" type="text" inputmode="decimal" placeholder="0,00 €" />
+          <button id="yt-btn-add-ingreso">Añadir</button>
+        </div>
+      </div>
+
+      <div class="yt-row">
+        <label for="yt-input-comida">Añadir gasto en comida</label>
+        <div class="yt-input-wrap">
+          <input id="yt-input-comida" type="text" inputmode="decimal" placeholder="0,00 €" />
+          <button id="yt-btn-add-comida">Añadir</button>
+        </div>
+      </div>
+
+      <div class="yt-row">
+        <label for="yt-input-videos">Vídeos hechos este mes</label>
+        <div class="yt-input-wrap">
+          <input id="yt-input-videos" type="number" min="0" step="1" />
+          <button id="yt-btn-set-videos">Guardar</button>
         </div>
       </div>
     </div>
-
-    <div class="yt-summary">
-      <label class="yt-field-label" for="yt-mes">Mes</label>
-      <input id="yt-mes" type="month" />
-
-      <div class="yt-summary-line">YouTube: <span id="yt-ingreso">0,00 €</span></div>
-      <div class="yt-summary-line">Comida: <span id="yt-comida">0,00 €</span></div>
-      <div class="yt-summary-line yt-summary-rest">
-        Te queda: <span id="yt-resto">0,00 €</span>
-      </div>
-      <div class="yt-summary-line">Vídeos: <span id="yt-videos-label">0</span></div>
+        <div class="yt-registros">
+      <div class="yt-registros-title">Registros del mes</div>
+      <ul id="yt-list" class="yt-list"></ul>
     </div>
+
   </div>
 
-  <div class="yt-form panel">
-    <div class="yt-row">
-      <label for="yt-input-ingreso">Añadir pago de YouTube</label>
-      <div class="yt-input-wrap">
-        <input id="yt-input-ingreso" type="text" inputmode="decimal" placeholder="0,00 €" />
-        <button id="yt-btn-add-ingreso">Añadir</button>
-      </div>
-    </div>
-
-    <div class="yt-row">
-      <label for="yt-input-comida">Añadir gasto en comida</label>
-      <div class="yt-input-wrap">
-        <input id="yt-input-comida" type="text" inputmode="decimal" placeholder="0,00 €" />
-        <button id="yt-btn-add-comida">Añadir</button>
-      </div>
-    </div>
-
-    <div class="yt-row">
-      <label for="yt-input-videos">Vídeos hechos este mes</label>
-      <div class="yt-input-wrap">
-        <input id="yt-input-videos" type="number" min="0" step="1" />
-        <button id="yt-btn-set-videos">Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="yt-charts panel">
+  <!-- Panel gráficos con tabs -->
+  <div class="panel yt-charts">
     <div class="yt-chart-header">
-      <div class="yt-chart-title">Histórico YouTube vs comida</div>
+      <div class="yt-chart-title">Histórico</div>
+      <div class="yt-chart-tabs">
+        <button class="yt-chart-tab active" data-yt-chart="money">€</button>
+        <button class="yt-chart-tab" data-yt-chart="videos">Vídeos</button>
+      </div>
     </div>
-    <canvas id="yt-chart-money" width="360" height="160"></canvas>
+
+    <div class="yt-chart-body">
+      <canvas id="yt-chart-money" width="360" height="160"></canvas>
+      <canvas id="yt-chart-videos" width="360" height="120"></canvas>
+    </div>
+
     <div class="yt-chart-legend">
       <span class="yt-legend-income">Ingresos YouTube</span>
       <span class="yt-legend-food">Gasto comida</span>
     </div>
-  </div>
-
-  <div class="yt-charts panel">
-    <div class="yt-chart-header">
-      <div class="yt-chart-title">Vídeos por mes</div>
-    </div>
-    <canvas id="yt-chart-videos" width="360" height="120"></canvas>
   </div>
 </section>
 
