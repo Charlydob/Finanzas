@@ -1940,3 +1940,163 @@ margin-top: 0px;
   font-size: 14px;
   cursor: pointer;
 }
+/* ===== PESTAÑA YOUTUBE ===== */
+
+.panel-youtube {
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 8px 2px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.yt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.yt-title {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.yt-mes-label {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.yt-top {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.yt-ring-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yt-ring {
+  --pct: 0deg;
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  background: conic-gradient(#22c55e var(--pct), rgba(15, 23, 42, 0.96) 0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.yt-ring-inner {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.98);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.yt-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.yt-summary input[type="month"] {
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+.yt-summary-rest {
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.yt-summary-rest.neg {
+  color: var(--bad);
+}
+
+.yt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.yt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.yt-input-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.yt-input-wrap input {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.yt-input-wrap button {
+  padding: 6px 10px;
+  font-size: 11px;
+  border-radius: 999px;
+}
+
+.yt-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.yt-chart-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.yt-chart-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.yt-chart-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 4px;
+}
+
+.yt-legend-income::before {
+  background: #22c55e;
+}
+
+.yt-legend-food::before {
+  background: #f97373;
+}
