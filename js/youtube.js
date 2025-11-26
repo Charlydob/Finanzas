@@ -1,6 +1,11 @@
 // js/youtube.js
 (function () {
   const STORAGE_KEY = "finanzas_youtube_v2";
+    const YT_DB_ROOT = "finanzas_youtube";
+
+  let ytRef = null;
+  let ytUid = null;
+  let ytFirebaseReady = false;
 
   // ---------- Utils ----------
   function parseEuro(str) {
@@ -52,8 +57,7 @@
   }
 
   // ---------- Data ----------
-  let data = loadData();
-  let currentMonth = getCurrentMonthKey();
+
 
   function loadData() {
     try {
@@ -90,13 +94,31 @@
     }
   }
 
-  function saveData() {
+  function saveDataLocal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.warn("[YT] error al guardar localStorage", e);
     }
   }
+
+  function saveData() {
+    // si hay Firebase, guardamos allí y luego en local
+    if (ytRef && ytFirebaseReady && typeof firebase !== "undefined") {
+      ytRef.set(data, (err) => {
+        if (err) {
+          console.warn("[YT] error al guardar en Firebase", err);
+        } else {
+          saveDataLocal();
+        }
+      });
+    } else {
+      // solo local (offline / sin login)
+      saveDataLocal();
+    }
+  }
+
+
 
   function ensureMonth(key) {
     if (!data[key]) {
@@ -107,10 +129,57 @@
       if (typeof data[key].videos !== "number") data[key].videos = 0;
     }
   }
-
   function getMonthList() {
     return Object.keys(data).sort();
   }
+
+  function getUidSafe() {
+    try {
+      if (typeof getUidFromLogin === "function") {
+        const uid = getUidFromLogin();
+        if (uid) return uid;
+      }
+    } catch (e) {
+      console.warn("[YT] getUidFromLogin error", e);
+    }
+    return null;
+  }
+
+  function initFirebaseSync() {
+    if (ytRef || typeof firebase === "undefined" || !firebase.database) {
+      return;
+    }
+    const uid = getUidSafe();
+    if (!uid) {
+      console.warn("[YT] UID no disponible aún para YouTube");
+      return;
+    }
+
+    ytUid = uid;
+    ytRef = firebase.database().ref(`${YT_DB_ROOT}/${uid}`);
+    ytFirebaseReady = true;
+
+    ytRef.on("value", (snap) => {
+      const val = snap.val();
+      if (val && typeof val === "object") {
+        data = val;
+      } else if (!val && data && Object.keys(data).length) {
+        // Firebase vacío pero hay datos locales → subimos locales
+        ytRef.set(data, (err) => {
+          if (err) console.warn("[YT] error al subir datos locales a Firebase", err);
+        });
+        return; // esperamos siguiente 'value'
+      } else {
+        data = {};
+      }
+      saveDataLocal();
+      ensureMonth(currentMonth);
+      render();
+    });
+  }
+
+  let data = loadData();
+  let currentMonth = getCurrentMonthKey();
 
   function getTotalsForMonth(key) {
     ensureMonth(key);
@@ -315,7 +384,7 @@
     const W = canvas.width;
     const H = canvas.height;
     const paddingLeft = 32;
-    const paddingRight = 12;
+    const paddingRight = 16;
     const paddingTop = 16;
     const paddingBottom = 30;
 
@@ -402,7 +471,7 @@
     const W = canvas.width;
     const H = canvas.height;
     const paddingLeft = 32;
-    const paddingRight = 12;
+    const paddingRight = 18;
     const paddingTop = 16;
     const paddingBottom = 30;
 
@@ -544,6 +613,7 @@
           ensureMonth(currentMonth);
           data[currentMonth].videos = val;
           saveData();
+            initFirebaseSync();
           render();
         }
       });
@@ -557,6 +627,7 @@
     }
 
     setupChartTabs();
+      initFirebaseSync();
     render();
   }
 

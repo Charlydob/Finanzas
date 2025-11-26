@@ -2241,3 +2241,7 @@ margin-top: 0px;
 .yt-item-btn-del {
   border-color: rgba(248, 113, 113, 0.4);
 }
+#yt-chart-money,
+#yt-chart-videos {
+  width: 100%;
+}
