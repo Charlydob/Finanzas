@@ -4,6 +4,7 @@
 
   const STORAGE_KEY = "finanzas_mercados_watchlist";
 
+  // Mapa simple símbolo -> id CoinGecko (cripto)
   const COINGECKO_MAP = {
     BTC: "bitcoin",
     ETH: "ethereum",
@@ -14,6 +15,8 @@
     DOGE: "dogecoin",
     AVAX: "avalanche-2"
   };
+
+  const ISIN_REGEX = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
 
   function parseEs(raw) {
     if (!raw) return 0;
@@ -32,6 +35,8 @@
     });
   }
 
+  // ------- FETCH PRECIOS -------
+
   async function fetchCryptoPrice(symbol) {
     const key = symbol.trim().toUpperCase();
     const id = COINGECKO_MAP[key];
@@ -45,7 +50,7 @@
       "&vs_currencies=eur";
 
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Error al obtener precio (HTTP).");
+    if (!res.ok) throw new Error("Error al obtener precio (HTTP cripto).");
 
     const data = await res.json();
     const price = data[id]?.eur;
@@ -53,28 +58,98 @@
       throw new Error("No se ha encontrado precio en EUR.");
     }
 
-    return { price, id, symbol: key };
+    return { price, id, symbol: key, currency: "EUR" };
   }
 
-  async function fetchAssetPrice(tipo, symbol, precioManual) {
+  async function fetchStockByTicker(symbol) {
+    const q = symbol.trim().toUpperCase();
+    const url =
+      "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" +
+      encodeURIComponent(q);
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Error al obtener precio (HTTP bolsa).");
+
+    const data = await res.json();
+    const item =
+      data &&
+      data.quoteResponse &&
+      Array.isArray(data.quoteResponse.result) &&
+      data.quoteResponse.result[0];
+
+    if (!item || typeof item.regularMarketPrice !== "number") {
+      throw new Error("No se ha encontrado precio para ese ticker.");
+    }
+
+    return {
+      price: item.regularMarketPrice,
+      symbol: item.symbol || q,
+      currency: item.currency || "EUR",
+      name: item.longName || item.shortName || item.symbol || q
+    };
+  }
+
+  async function fetchStockByIsin(isinRaw) {
+    const isin = isinRaw.trim().toUpperCase();
+    const url =
+      "https://query1.finance.yahoo.com/v1/finance/search?q=" +
+      encodeURIComponent(isin) +
+      "&quotesCount=1&newsCount=0";
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Error al buscar ISIN (HTTP).");
+
+    const data = await res.json();
+    const first =
+      data &&
+      data.quotes &&
+      Array.isArray(data.quotes) &&
+      data.quotes[0];
+
+    if (!first || !first.symbol) {
+      throw new Error("No se ha encontrado ningún ticker para esa ISIN.");
+    }
+
+    // Reutilizamos la lógica de ticker para pillar precio y moneda
+    return fetchStockByTicker(first.symbol);
+  }
+
+  async function fetchStockOrEtfPrice(rawSymbolOrIsin) {
+    const s = rawSymbolOrIsin.trim().toUpperCase();
+    if (!s) throw new Error("Ticker / ISIN vacío.");
+
+    if (ISIN_REGEX.test(s)) {
+      // Parece una ISIN
+      return fetchStockByIsin(s);
+    }
+
+    // Ticker directo: NVDA, GLD, GC=F (oro), etc.
+    return fetchStockByTicker(s);
+  }
+
+  async function fetchAssetPrice(tipo, rawSymbol, precioManual) {
     if (tipo === "crypto") {
-      return fetchCryptoPrice(symbol);
+      return fetchCryptoPrice(rawSymbol);
     }
 
-    // Acciones / ETF / fondos: sin API pública segura desde front,
-    // se usa el precio manual que introduzcas.
-    if (precioManual && !Number.isNaN(precioManual) && precioManual > 0) {
-      return {
-        price: precioManual,
-        id: symbol,
-        symbol: symbol.trim().toUpperCase()
-      };
+    // Bolsa / ETF / fondos
+    try {
+      return await fetchStockOrEtfPrice(rawSymbol);
+    } catch (e) {
+      // Fallback: si el usuario ha puesto precio manual, úsalo
+      if (precioManual && !Number.isNaN(precioManual) && precioManual > 0) {
+        return {
+          price: precioManual,
+          symbol: rawSymbol.trim().toUpperCase(),
+          currency: "EUR",
+          name: rawSymbol.trim().toUpperCase()
+        };
+      }
+      throw e;
     }
-
-    throw new Error(
-      "Para acciones/ETF introduce el precio actual en €/u (campo de precio)."
-    );
   }
+
+  // ------- STORAGE -------
 
   function loadWatchlist() {
     try {
@@ -96,10 +171,12 @@
     }
   }
 
+  // ------- UI -------
+
   document.addEventListener("DOMContentLoaded", () => {
     const $tipo = document.getElementById("merc-tipo");
     const $simbolo = document.getElementById("merc-simbolo");
-    const $cantidad = document.getElementById("merc-cantidad");
+    const $cantidad = document.getElementById("merc-cantidad"); // UNIDADES
     const $precioManual = document.getElementById("merc-precio-manual");
     const $btnCalcular = document.getElementById("merc-btn-calcular");
     const $btnGuardar = document.getElementById("merc-btn-guardar");
@@ -137,28 +214,32 @@
         const row = document.createElement("div");
         row.className = "merc-item";
 
-        const tipoLabel = item.tipo === "crypto" ? "Cripto" : "Acción/ETF";
-
-        const unidades =
+        const tipoLabel = item.tipo === "crypto" ? "Cripto" : "Acción/ETF/Fondo";
+        const valor =
           item.lastPrice && item.lastPrice > 0
-            ? item.amount / item.lastPrice
+            ? item.lastPrice * item.units
             : null;
+        const currency = item.currency || "EUR";
 
         row.innerHTML = `
           <div class="merc-item-main">
-            <div class="merc-item-title">${item.symbol} · ${tipoLabel}</div>
+            <div class="merc-item-title">
+              ${item.symbol} · ${tipoLabel}
+            </div>
             <div class="merc-item-meta">
-              Invertido: <span>${numberToEs(item.amount)} €</span>
+              Unidades: <span>${item.units}</span>
               · Precio: <span>${
                 item.lastPrice
-                  ? numberToEs(item.lastPrice) + " €/u"
+                  ? numberToEs(item.lastPrice) + " " + currency + "/u"
                   : "—"
               }</span>
             </div>
           </div>
           <div class="merc-item-right">
             <div class="merc-item-value">${
-              unidades ? unidades.toFixed(6) + " u" : "—"
+              valor !== null
+                ? numberToEs(valor) + " " + currency
+                : "—"
             }</div>
             <button class="merc-item-delete" aria-label="Eliminar">×</button>
           </div>
@@ -166,7 +247,9 @@
 
         const btnDel = row.querySelector(".merc-item-delete");
         btnDel.addEventListener("click", () => {
-          watchlist = watchlist.filter((w) => w.id !== item.id);
+          watchlist = watchlist.filter(
+            (w) => !(w.symbol === item.symbol && w.tipo === item.tipo)
+          );
           saveWatchlist(watchlist);
           renderList();
         });
@@ -175,41 +258,44 @@
       });
     }
 
+    // Calcular valor actual (sin guardar todavía)
     $btnCalcular.addEventListener("click", async () => {
       const tipo = $tipo.value;
       const symbol = $simbolo.value.trim();
-      const amount = parseEs($cantidad.value);
+      const units = parseEs($cantidad.value); // unidades (BTC, acciones, participaciones)
       const precioManualVal = parseEs($precioManual.value);
 
       if (!symbol) {
-        $resultado.textContent = "Pon un símbolo / ticker.";
+        $resultado.textContent = "Pon un símbolo / ticker o ISIN.";
         return;
       }
-      if (!amount || amount <= 0) {
-        $resultado.textContent = "Pon una cantidad en € válida.";
+      if (!units || units <= 0) {
+        $resultado.textContent = "Pon una cantidad de unidades válida.";
         return;
       }
 
       $resultado.textContent = "Buscando precio...";
       try {
-        const { price } = await fetchAssetPrice(
+        const { price, currency } = await fetchAssetPrice(
           tipo,
           symbol,
           tipo === "crypto" ? null : precioManualVal
         );
-        const units = amount / price;
-        const labelTipo = tipo === "crypto" ? "cripto" : "activo";
+        const euroValue = units * price;
+        const labelTipo =
+          tipo === "crypto" ? "cripto" : "activo de bolsa / fondo";
 
         $resultado.textContent =
-          `${numberToEs(amount)} € ⇒ ` +
-          `${units.toFixed(6)} ${symbol.toUpperCase()} ` +
-          `(precio aprox. ${numberToEs(price)} €/u, ${labelTipo})`;
+          `${units} ${symbol.toUpperCase()} ≈ ` +
+          `${numberToEs(euroValue)} ${currency} ` +
+          `(precio aprox. ${numberToEs(price)} ${currency}/u, ${labelTipo})`;
 
         lastCalc = {
           tipo,
           symbol: symbol.trim().toUpperCase(),
-          amount,
-          price
+          units,
+          price,
+          currency: currency || "EUR"
         };
       } catch (err) {
         console.error("[MERCADOS] Error cálculo", err);
@@ -221,22 +307,36 @@
       }
     });
 
+    // Guardar en la lista de seguimiento
     $btnGuardar.addEventListener("click", () => {
       if (!lastCalc) {
         $resultado.textContent = "Primero calcula con un precio válido.";
         return;
       }
-      watchlist.push({
-        id: Date.now(),
+
+      const nuevo = {
         tipo: lastCalc.tipo,
         symbol: lastCalc.symbol,
-        amount: lastCalc.amount,
-        lastPrice: lastCalc.price
-      });
+        units: lastCalc.units,
+        lastPrice: lastCalc.price,
+        currency: lastCalc.currency
+      };
+
+      // Un activo único por tipo+símbolo: se actualiza si ya existe
+      const idx = watchlist.findIndex(
+        (w) => w.symbol === nuevo.symbol && w.tipo === nuevo.tipo
+      );
+      if (idx >= 0) {
+        watchlist[idx] = nuevo;
+      } else {
+        watchlist.push(nuevo);
+      }
+
       saveWatchlist(watchlist);
       renderList();
     });
 
+    // Actualizar todos los precios de la lista
     $btnRefrescar.addEventListener("click", async () => {
       if (!watchlist.length) return;
 
@@ -245,17 +345,24 @@
 
       try {
         for (const item of watchlist) {
-          if (item.tipo === "crypto") {
-            try {
-              const { price } = await fetchCryptoPrice(item.symbol);
+          try {
+            if (item.tipo === "crypto") {
+              const { price, currency } = await fetchCryptoPrice(item.symbol);
               item.lastPrice = price;
-            } catch (e) {
-              console.error(
-                "[MERCADOS] Error actualizando",
-                item.symbol,
-                e
+              item.currency = currency || "EUR";
+            } else {
+              const { price, currency } = await fetchStockOrEtfPrice(
+                item.symbol
               );
+              item.lastPrice = price;
+              item.currency = currency || "EUR";
             }
+          } catch (e) {
+            console.error(
+              "[MERCADOS] Error actualizando",
+              item.symbol,
+              e
+            );
           }
         }
         saveWatchlist(watchlist);
@@ -266,6 +373,7 @@
       }
     });
 
+    // Pintar lo que haya guardado al entrar
     renderList();
   });
 })();
