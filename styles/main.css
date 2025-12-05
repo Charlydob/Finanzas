@@ -2245,3 +2245,25 @@ margin-top: 0px;
 #yt-chart-videos {
   width: 100%;
 }
+.yt-daily-line {
+  font-size: 11px;
+}
+
+.yt-daily-badge {
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.yt-daily-badge.ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.yt-daily-badge.bad {
+  background: rgba(248, 113, 113, 0.12);
+  color: #fb7185;
+}

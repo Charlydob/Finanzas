@@ -24,6 +24,13 @@
       maximumFractionDigits: 2,
     }) + " €";
   }
+  function formatDays(n) {
+    if (!Number.isFinite(n) || n <= 0) return "0,0";
+    return n.toLocaleString("es-ES", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
 
   function formatEuroShort(n) {
     const val = Number.isFinite(n) ? n : 0;
@@ -208,6 +215,7 @@
   }
 
   // ---------- Render ----------
+  // ---------- Render ----------
   function render() {
     const tab = document.getElementById("tab-youtube");
     if (!tab) return;
@@ -228,6 +236,13 @@
     const elRingText = document.getElementById("yt-ring-text");
     const elRestLine = tab.querySelector(".yt-summary-rest");
 
+    // nuevos elementos diarios
+    const elDiarioIdeal = document.getElementById("yt-diario-ideal");
+    const elDiarioActual = document.getElementById("yt-diario-actual");
+    const elDiasIdeal = document.getElementById("yt-dias-ideal");
+    const elDiasActual = document.getElementById("yt-dias-actual");
+    const elDiarioBadge = document.getElementById("yt-diario-badge");
+
     if (elIngreso) elIngreso.textContent = formatEuro(ingreso);
     if (elComida) elComida.textContent = formatEuro(comida);
     if (elResto) elResto.textContent = formatEuro(resto);
@@ -238,6 +253,7 @@
       elRestLine.classList.toggle("neg", resto < 0);
     }
 
+    // aro principal
     if (elRing && elRingText) {
       let pct = 0;
       if (ingreso > 0) {
@@ -250,10 +266,80 @@
       elRing.style.setProperty("--pct", pct + "deg");
     }
 
+    // ==== CÁLCULOS DIARIOS ====
+
+    // días del mes seleccionado
+    let daysInMonth = 30;
+    const parts = currentMonth.split("-");
+    if (parts.length === 2) {
+      const year = parseInt(parts[0], 10);
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      if (!isNaN(year) && !isNaN(monthIdx)) {
+        daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+      }
+    }
+
+    // días transcurridos para calcular ritmo actual
+    const now = new Date();
+    let usedDays = daysInMonth;
+    if (currentMonth === getCurrentMonthKey()) {
+      usedDays = Math.min(now.getDate(), daysInMonth);
+    }
+
+    const dailyIdeal =
+      ingreso > 0 && daysInMonth > 0 ? ingreso / daysInMonth : 0;
+    const dailyActual =
+      comida > 0 && usedDays > 0 ? comida / usedDays : 0;
+
+    const daysIdealLeft =
+      resto > 0 && dailyIdeal > 0 ? resto / dailyIdeal : 0;
+    const daysActualLeft =
+      resto > 0 && dailyActual > 0 ? resto / dailyActual : 0;
+
+    if (elDiarioIdeal) {
+      elDiarioIdeal.textContent =
+        dailyIdeal > 0 ? formatEuro(dailyIdeal) : "—";
+    }
+
+    if (elDiarioActual) {
+      elDiarioActual.textContent =
+        dailyActual > 0 ? formatEuro(dailyActual) : "—";
+    }
+
+    if (elDiasIdeal) {
+      elDiasIdeal.textContent =
+        daysIdealLeft > 0 ? formatDays(daysIdealLeft) : "0,0";
+    }
+
+    if (elDiasActual) {
+      elDiasActual.textContent =
+        daysActualLeft > 0 ? formatDays(daysActualLeft) : "0,0";
+    }
+
+    if (elDiarioBadge) {
+      elDiarioBadge.classList.remove("ok", "bad");
+      const hasIdeal = dailyIdeal > 0;
+
+      if (!hasIdeal || dailyActual === 0) {
+        elDiarioBadge.textContent = "—";
+      } else if (dailyActual > dailyIdeal) {
+        // estás gastando MÁS de lo recomendado → rojo
+        elDiarioBadge.textContent = "Por encima";
+        elDiarioBadge.classList.add("bad");
+      } else {
+        // estás por debajo del máximo diario → verde
+        elDiarioBadge.textContent = "Por debajo";
+        elDiarioBadge.classList.add("ok");
+      }
+    }
+
+    // ===========================
+
     renderRegistrosMes();
     drawMoneyChart();
     drawVideosChart();
   }
+
 
   // ---------- Lista de registros ----------
   function renderRegistrosMes() {
