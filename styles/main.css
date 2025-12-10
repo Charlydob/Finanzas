@@ -1644,9 +1644,7 @@ select:focus-visible {
 .objetivos-header{
   margin-top: 0px;
 }
-.gastos-header {
 
-}
 .total-header{
 margin-top: 0px;
 }
@@ -2266,4 +2264,315 @@ margin-top: 0px;
 .yt-daily-badge.bad {
   background: rgba(248, 113, 113, 0.12);
   color: #fb7185;
+}
+/* ===== PESTAÑA CALENDARIO ===== */
+
+.panel-calendario {
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 8px 2px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.cal-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-title {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#cal-modo {
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.cal-header-filtros {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+
+.cal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.cal-field label {
+  color: var(--muted);
+}
+
+.cal-field input,
+.cal-field select {
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5e7eb;
+  padding: 6px 10px;
+  font-size: 11px;
+  outline: none;
+}
+
+/* Contenedor del calendario */
+.cal-grid {
+  border-radius: var(--radius);
+  padding: 8px;
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid var(--line-soft);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+  font-size: 11px;
+}
+
+/* Vista diaria: semanas y días */
+.cal-grid-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-cell {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 3px 4px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(30, 41, 59, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  box-sizing: border-box;
+}
+
+.cal-head {
+  border: none;
+  background: transparent;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cal-empty {
+  opacity: 0.1;
+}
+
+.cal-day-num {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.cal-amount {
+  font-size: 10px;
+}
+
+.cal-pct {
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+/* Estados positivo / negativo / neutro */
+.cal-pos {
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.28), transparent 60%),
+    rgba(15, 23, 42, 0.96);
+  border-color: rgba(34, 197, 94, 0.7);
+}
+
+.cal-neg {
+  background:
+    radial-gradient(circle at top left, rgba(239, 68, 68, 0.3), transparent 60%),
+    rgba(15, 23, 42, 0.96);
+  border-color: rgba(248, 113, 113, 0.8);
+}
+
+.cal-zero {
+  opacity: 0.9;
+}
+
+.cal-no-data {
+  opacity: 0.35;
+}
+
+/* Vista mensual (12 meses en grid) */
+.cal-grid-month {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.cal-month-cell {
+  min-height: 52px;
+  align-items: flex-start;
+}
+
+.cal-label-main {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+/* Vista anual (años conocidos en grid) */
+.cal-grid-year {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.cal-year-cell {
+  min-height: 52px;
+  align-items: flex-start;
+}
+
+/* Responsive: en pantallas muy estrechas el calendario respira un poco más */
+@media (max-width: 360px) {
+  .cal-grid-month,
+  .cal-grid-year {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* ==== Calendario variación ==== */
+.panel-calendario {
+  background: transparent;
+  border-radius: var(--radius);
+  padding: 8px 2px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-grid-inner {
+  margin-top: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--line-soft);
+  background: rgba(15, 23, 42, 0.96);
+  padding: 6px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.9);
+}
+
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-week-head {
+  margin-bottom: 4px;
+}
+
+.cal-cell {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 3px 4px;
+  font-size: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.cal-head {
+  text-align: center;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.cal-empty {
+  opacity: 0;
+}
+
+.cal-day {
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid rgba(30, 41, 59, 0.95);
+}
+
+.cal-day-num {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.cal-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-pct {
+  font-size: 8px;
+  opacity: 0.8;
+}
+
+.cal-pos {
+  border-color: rgba(44, 231, 91, 0.254) !important;
+  background: rgba(97, 233, 52, 0.263) !important;
+  box-shadow: 0 0 0 1px rgba(51, 255, 0, 0.25);
+}
+
+.cal-neg {
+  border-color: rgba(231, 44, 44, 0.254) !important;
+  background: rgba(233, 52, 52, 0.263) !important;
+  box-shadow: 0 0 0 1px rgba(255, 0, 0, 0.25);
+}
+
+.cal-zero {
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.cal-no-data {
+  opacity: 0.4;
+}
+
+/* Día actual */
+.cal-today {
+  box-shadow: 0 0 0 2px #1500ff;
+}
+
+/* Vista meses */
+.cal-grid-month,
+.cal-grid-year {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.cal-month-cell,
+.cal-year-cell {
+  background: rgba(15, 23, 42, 0.98);
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid rgba(30, 41, 59, 0.95);
+  font-size: 10px;
+}
+
+.cal-label-main {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
 }

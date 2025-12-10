@@ -45,8 +45,12 @@
     <button class="tab tab-mercados" data-tab="mercados" aria-label="Mercados">
       <span class="tab-icon">📈</span>
     </button>
-     <button class="tab tab-youtube" data-tab="youtube" aria-label="YouTube & comida">
+    <button class="tab tab-youtube" data-tab="youtube" aria-label="YouTube & comida">
       <span class="tab-icon">▶️</span>
+    </button>
+    <!-- NUEVA PESTAÑA CALENDARIO -->
+    <button class="tab tab-calendario" data-tab="calendario" aria-label="Calendario">
+      <span class="tab-icon">📅</span>
     </button>
   </nav>
 
@@ -355,6 +359,40 @@
     </div>
   </div>
 </section>
+<!-- TAB CALENDARIO -->
+<section id="tab-calendario" class="panel-calendario tab-panel" hidden>
+  <div class="cal-header">
+    <div class="cal-header-top">
+      <div class="cal-title">Calendario de variación</div>
+      <select id="cal-modo">
+        <option value="dia" selected>Día</option>
+        <option value="mes">Mes</option>
+        <option value="anio">Año</option>
+      </select>
+    </div>
+
+    <div class="cal-header-filtros">
+      <div class="cal-field cal-field-mes">
+        <label for="cal-mes">Mes</label>
+        <input id="cal-mes" type="month" />
+      </div>
+      <div class="cal-field cal-field-anio">
+        <label for="cal-anio">Año</label>
+        <input id="cal-anio" type="number" inputmode="numeric" placeholder="2025" />
+      </div>
+      <div class="cal-field">
+        <label for="cal-cuenta">Cuenta</label>
+        <select id="cal-cuenta">
+          <!-- se rellena desde JS -->
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="cal-grid" class="cal-grid">
+    <!-- pintado desde JS -->
+  </div>
+</section>
 
 </main>
   <!-- MODALES -->
@@ -551,6 +589,7 @@
     firebase.initializeApp(firebaseConfig);
   </script>
   <script src="js/app.js"></script>
+  <script src="js/calendario.js"></script>
   <script src="js/objetivos.js"></script>
   <script src="js/finanzas.js"></script>
   <script src="js/mercados.js"></script>

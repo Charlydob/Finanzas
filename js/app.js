@@ -1514,6 +1514,15 @@ function persistLocal(){
   localStorage.setItem(KEY_DATA,    JSON.stringify(state.registros));
   localStorage.setItem(KEY_CUENTAS, JSON.stringify(state.cuentas));
   localStorage.setItem(KEY_OBJETIVOS, JSON.stringify(state.objetivos));
+
+  // avisamos al calendario (y otros) de que hay datos nuevos
+  if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+    try {
+      window.dispatchEvent(new CustomEvent("finanzas-data-updated"));
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
 
 
