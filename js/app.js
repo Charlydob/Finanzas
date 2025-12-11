@@ -1923,22 +1923,62 @@ activarTab("cuentas");
   }
 })();
 // ======== EXPORTS GLOBALES PARA OTROS JS ========
+// ======== EXPORTS GLOBALES PARA OTROS JS ========
 window.FIN_GLOBAL = {
   getCuentas() {
     return Array.isArray(state.cuentas) ? [...state.cuentas] : [];
   },
+
   getRegistros() {
-    return Array.isArray(state.registros) ? JSON.parse(JSON.stringify(state.registros)) : [];
+    return Array.isArray(state.registros)
+      ? JSON.parse(JSON.stringify(state.registros))
+      : [];
   },
+
   getLastRegistro() {
     if (!state.registros.length) return null;
-    return JSON.parse(JSON.stringify(state.registros[state.registros.length - 1]));
+    return JSON.parse(
+      JSON.stringify(state.registros[state.registros.length - 1])
+    );
   },
+
+  // Último saldo conocido por cuenta (escaneando todos los registros)
   getSaldosActuales() {
-    const last = this.getLastRegistro();
-    return last?.saldos ? { ...last.saldos } : {};
+    const regs = Array.isArray(state.registros) ? state.registros : [];
+    if (!regs.length) return {};
+
+    const cuentas = Array.isArray(state.cuentas) ? state.cuentas : [];
+    const ordered = [...regs].sort((a, b) => {
+      const da = new Date(a.fecha);
+      const db = new Date(b.fecha);
+      return da - db;
+    });
+
+    const lastSaldos = {};
+    cuentas.forEach((cta) => {
+      lastSaldos[cta] = undefined;
+    });
+
+    ordered.forEach((r) => {
+      if (!r || !r.saldos) return;
+      cuentas.forEach((cta) => {
+        const v = r.saldos[cta];
+        if (Number.isFinite(v)) {
+          lastSaldos[cta] = v;
+        }
+      });
+    });
+
+    const out = {};
+    cuentas.forEach((cta) => {
+      const v = lastSaldos[cta];
+      if (Number.isFinite(v)) out[cta] = v;
+    });
+
+    return out;
   }
 };
+
 console.log("[GLOBAL] FIN_GLOBAL listo");
 
 })();

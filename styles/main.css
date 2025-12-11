@@ -892,7 +892,7 @@ th .col-toggle {
   color: var(--muted);
 }
 
-#btn-nuevo-objetivo, #btn-origen-cuentas {
+#btn-nuevo-objetivo, #btn-origen-cuentas, .btn-pill-small, #g-btn-nuevo-gasto, #g-btn-ingresos-guardar, #g-btn-cerrar-mes, #g-btn-inversion-guardar {
   padding: 6px 10px;
   font-size: 12px;
   border-radius: 18px;
@@ -1458,10 +1458,7 @@ select:focus-visible {
 
 .gasto-categoria,
 .gasto-esencial {
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
+  display: none;
 }
 
 .gasto-esencial {
@@ -2575,4 +2572,28 @@ margin-top: 0px;
   font-size: 12px;
   font-weight: 500;
   margin-bottom: 2px;
+}
+/* Ajustes compacidad pestaña GASTOS FIJOS */
+.panel-gastos .gastos-header {
+  margin-bottom: 16px;
+}
+
+/* Limitar altura de las listas y meter scroll interno */
+#gastos-list-body,
+#ingresos-list-body {
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* Ingresos: misma tarjeta pero más limpia y con tono verde suave */
+#ingresos-list-body .gasto-item {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(15, 23, 42, 0.96);
+}
+
+/* Texto de filas algo más legible pero compacto */
+#ingresos-list-body .gasto-main,
+#gastos-list-body .gasto-main {
+  font-size: 11px;
 }
