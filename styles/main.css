@@ -2397,11 +2397,11 @@ margin-top: 0px;
 }
 
 .cal-amount {
-  font-size: 10px;
+  font-size: 8px;
 }
 
 .cal-pct {
-  font-size: 9px;
+  font-size: 6px;
   opacity: 0.8;
 }
 
@@ -2615,7 +2615,7 @@ margin-top: 0px;
   font-size: 11px ;
 }
 .gasto-item, .gasto-nombre,.gasto-importe{
-  font-size: 12px;
+  font-size: 10px;
 }
 .gasto-menu-btn{
   display: flex;

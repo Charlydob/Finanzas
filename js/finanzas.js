@@ -14,14 +14,46 @@ const KEY_ORIGEN  = "mis_cuentas_fase1_origen_cuentas";
     historial       : []
   };
 
-  function esToNumberLocal(s){
-    if (s == null) return 0;
-    if (typeof s === "number") return s;
-    s = String(s).replace(/\s/g,"").replace("€","").replace(/\./g,"").replace(",", ".");
+ function esToNumberLocal(s){
+  if (s == null) return 0;
+  if (typeof s === "number") return s;
 
-    const n = parseFloat(s);
-    return Number.isFinite(n) ? n : 0;
+  let str = String(s)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/€/g, "");
+
+  if (!str) return 0;
+
+  const hasComma = str.indexOf(",") !== -1;
+  const hasDot   = str.indexOf(".") !== -1;
+
+  if (hasComma && hasDot){
+    // Caso tipo "1.234,56" o "1,234.56": el último símbolo es el decimal
+    const lastComma = str.lastIndexOf(",");
+    const lastDot   = str.lastIndexOf(".");
+    const dec = lastComma > lastDot ? "," : ".";
+    const other = dec === "," ? "." : ",";
+    const reOther = new RegExp("\\" + other, "g");
+    str = str.replace(reOther, "").replace(dec, ".");
+  } else if (hasComma){
+    // Estilo español simple: "123,45"
+    str = str.replace(/\./g, "").replace(",", ".");
+  } else if (hasDot){
+    // Estilo "123.45" (input number del navegador)
+    const parts = str.split(".");
+    if (parts.length > 2){
+      // "1.234.56" → "1234.56"
+      const frac = parts.pop();
+      str = parts.join("") + "." + frac;
+    }
+    // si solo hay un punto, lo dejamos como decimal: "123.45"
   }
+
+  const n = parseFloat(str);
+  return Number.isFinite(n) ? n : 0;
+}
+
 
   function numberToEsLocal(n, opts){
     return new Intl.NumberFormat("es-ES", opts||{style:"currency",currency:"EUR"}).format(n);
