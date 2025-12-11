@@ -465,16 +465,16 @@ function recalcVariaciones(){
   async function onGuardar(){
     const fecha = $fecha.value;
     if (!fecha) return alert("Pon una fecha.");
-    const {total,variacion,varpct} = calcularTotal();
+    const { total, variacion, varpct } = calcularTotal();
     const saldos = leerInputs();
 
-    if (state.editingIndex>=0){
-      state.registros[state.editingIndex] = {fecha,saldos,total,variacion,varpct};
+    if (state.editingIndex >= 0) {
+      state.registros[state.editingIndex] = { fecha, saldos, total, variacion, varpct };
       recalcVariaciones();
       state.editingIndex = -1;
       setGuardarLabel();
     } else {
-      state.registros.push({fecha,saldos,total,variacion,varpct});
+      state.registros.push({ fecha, saldos, total, variacion, varpct });
       recalcVariaciones();
     }
 
@@ -483,19 +483,25 @@ function recalcVariaciones(){
     renderDashboard();
     closeModal();
 
-    try{
-      if (window.firebase && state.uid){
+    try {
+      if (window.firebase && state.uid) {
         setStatus("Guardando…");
-        await firebase.database().ref(`/users/${state.uid}/finanzas/fase1`).set({
-          cuentas: state.cuentas,
-          registros: state.registros,
-          objetivos: state.objetivos,
-          updatedAt: firebase.database.ServerValue.TIMESTAMP
-        });
 
-        setStatus("✔ Guardado"); setTimeout(()=>setStatus(""),1200);
+        // 👇 ANTES: .set(...) → machacaba todo fase1 (incluido /gastos)
+        await firebase
+          .database()
+          .ref(`/users/${state.uid}/finanzas/fase1`)
+          .update({
+            cuentas  : state.cuentas,
+            registros: state.registros,
+            objetivos: state.objetivos,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          });
+
+        setStatus("✔ Guardado");
+        setTimeout(() => setStatus(""), 1200);
       }
-    }catch(e){
+    } catch (e) {
       console.error(e);
       setStatus("✖ Error guardando");
     }
