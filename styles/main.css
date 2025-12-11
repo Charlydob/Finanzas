@@ -2036,9 +2036,9 @@ margin-top: 0px;
 /* Formulario compacto debajo del aro */
 .yt-main-form {
   border-top: 1px solid var(--line-soft);
-  padding-top: 6px;
+  padding-top: 2px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
 }
 
@@ -2580,7 +2580,7 @@ margin-top: 0px;
 
 /* Limitar altura de las listas y meter scroll interno */
 #gastos-list-body,
-#ingresos-list-body {
+#ingresos-list-body, .yt-registros {
   max-height: 140px;
   overflow-y: auto;
   padding-right: 2px;
