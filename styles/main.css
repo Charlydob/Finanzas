@@ -893,11 +893,16 @@ th .col-toggle {
 }
 
 #btn-nuevo-objetivo, #btn-origen-cuentas, .btn-pill-small, #g-btn-nuevo-gasto, #g-btn-ingresos-guardar, #g-btn-cerrar-mes, #g-btn-inversion-guardar {
-  padding: 6px 10px;
+  padding: 6px;
   font-size: 12px;
   border-radius: 18px;
-  background: rgba(253, 253, 253, 0.566);
-  backdrop-filter: blur(8px);
+  background: rgba(253, 253, 253, 0.097);
+  backdrop-filter: blur(80px);
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  color: #ffffff;
+  border: 1px solid white;
 }
 
 /* bloque superior: donut global + resumen */
@@ -1368,12 +1373,15 @@ select:focus-visible {
 
 #g-input-ingresos {
   flex: 1;
-  padding: 6px 10px;
+  padding: 0px;
   border-radius: 999px;
-  border: 1px solid var(--line-soft);
+  border: 0px solid var(--line-soft);
   background: rgba(15, 23, 42, 0.96);
   color: #e5e7eb;
-  font-size: 12px;
+  font-size: 18px;
+  max-width: 70%;
+  min-width: 50%;
+  margin-right: 20px;
 }
 
 #g-input-ingresos::placeholder {
@@ -1474,7 +1482,7 @@ select:focus-visible {
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid var(--line-soft);
+  border: 0px solid var(--line-soft);
   background: transparent;
   font-size: 14px;
 }
@@ -2579,13 +2587,22 @@ margin-top: 0px;
 }
 
 /* Limitar altura de las listas y meter scroll interno */
-#gastos-list-body,
-#ingresos-list-body, .yt-registros {
+.yt-registros {
   max-height: 140px;
   overflow-y: auto;
   padding-right: 2px;
 }
 
+#ingresos-list-body {
+  max-height: 120px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+#gastos-list-body {
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
 /* Ingresos: misma tarjeta pero más limpia y con tono verde suave */
 #ingresos-list-body .gasto-item {
   border-color: rgba(34, 197, 94, 0.4);
@@ -2595,5 +2612,15 @@ margin-top: 0px;
 /* Texto de filas algo más legible pero compacto */
 #ingresos-list-body .gasto-main,
 #gastos-list-body .gasto-main {
-  font-size: 11px;
+  font-size: 11px ;
+}
+.gasto-item, .gasto-nombre,.gasto-importe{
+  font-size: 12px;
+}
+.gasto-menu-btn{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+
 }

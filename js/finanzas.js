@@ -882,7 +882,7 @@ function renderIngresosList(){
     const menuBtn = document.createElement("button");
     menuBtn.className = "gasto-menu-btn";
     menuBtn.type = "button";
-    menuBtn.textContent = "⋯";
+    menuBtn.textContent = "🖌️";
     menuBtn.addEventListener("click", () => {
       handleIngresoMenu(idx);
     });
@@ -948,7 +948,7 @@ function renderIngresosList(){
       const menuBtn = document.createElement("button");
       menuBtn.className = "gasto-menu-btn";
       menuBtn.type = "button";
-      menuBtn.textContent = "⋯";
+      menuBtn.textContent = "🖌️";
       menuBtn.addEventListener("click", () => {
         handleGastoMenu(idx);
       });
@@ -1422,7 +1422,7 @@ function renderInversionesList(){
     const menuBtn = document.createElement("button");
     menuBtn.className = "gasto-menu-btn";
     menuBtn.type = "button";
-    menuBtn.textContent = "⋯";
+    menuBtn.textContent = "🖌️";
     menuBtn.addEventListener("click", () => {
       handleInversionMenu(idx);
     });
